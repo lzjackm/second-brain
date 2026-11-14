@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.secondbrain.lead.__AREA__</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>__ROOT__/bin/run-lead.sh</string>
+		<string>__AREA__</string>
+	</array>
+	<key>StandardErrorPath</key>
+	<string>__ROOT__/logs/launchd-lead-__AREA__.log</string>
+	<key>StandardOutPath</key>
+	<string>__ROOT__/logs/launchd-lead-__AREA__.log</string>
+	<key>StartCalendarInterval</key>
+	<array>
+		<dict>
+			<key>Hour</key>
+			<integer>9</integer>
+			<key>Minute</key>
+			<integer>5</integer>
+		</dict>
+		<dict>
+			<key>Hour</key>
+			<integer>11</integer>
+			<key>Minute</key>
+			<integer>5</integer>
+		</dict>
+		<dict>
+			<key>Hour</key>
+			<integer>13</integer>
+			<key>Minute</key>
+			<integer>5</integer>
+		</dict>
+		<dict>
+			<key>Hour</key>
+			<integer>15</integer>
+			<key>Minute</key>
+			<integer>5</integer>
+		</dict>
+		<dict>
+			<key>Hour</key>
+			<integer>17</integer>
+			<key>Minute</key>
+			<integer>5</integer>
+		</dict>
+	</array>
+</dict>
+</plist>

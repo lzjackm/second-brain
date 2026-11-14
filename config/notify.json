@@ -1,0 +1,6 @@
+{
+  "stale_days": 3,
+  "remind_days": 3,
+  "include_waiting": true,
+  "quiet_hours": [20, 9]
+}

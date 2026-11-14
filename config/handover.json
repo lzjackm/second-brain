@@ -1,0 +1,5 @@
+{
+  "every_days": 2,
+  "_doc": "Handovers to check in on: from = the person handing over, key_prefix = the queue key prefix of the items they handed over, since = the handover date. Empty until you add one.",
+  "handovers": []
+}

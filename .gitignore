@@ -1,0 +1,17 @@
+# Your brain and everything it produces stay on your machine (guardrail G09). If you want them versioned,
+# keep them in a separate private repo; never push them to a public fork.
+brain/
+leads/*
+!leads/_template.md
+config/brain.json
+queue/items/
+log/
+logs/
+state/
+agents/
+synopsis/
+learn/
+architect/
+*.lock
+.DS_Store
+__pycache__/

@@ -1,0 +1,13 @@
+{
+  "_doc": "Model per job. Keys match the run name prefix (lead, sync, revise, chat, agent, execute, distill, learn, architect, execcall (the executor's single connector call); the director's model is router.json claude_model). Empty or missing = Claude Code default. Change one at a time and compare in Performance: cost and quality per job and model.",
+  "lead": "",
+  "sync": "",
+  "revise": "",
+  "chat": "",
+  "agent": "",
+  "execute": "",
+  "distill": "",
+  "learn": "claude-sonnet-5-5",
+  "calendar": "claude-sonnet-5-5",
+  "execcall": "haiku"
+}

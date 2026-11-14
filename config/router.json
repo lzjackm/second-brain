@@ -1,0 +1,8 @@
+{
+  "_doc": "Director decision backend. claude = a small Claude model via claude -p. decisions = a decisions model (decisions_model) behind the Vercel AI Gateway, key in Keychain under service <slug>-ai-gateway: yes/no questions combined in code; anything under decisions_min_confidence goes to claude. shadow logs the decisions model's route next to claude's in log/routes.jsonl without acting on it. Compare in Performance before switching.",
+  "backend": "claude",
+  "claude_model": "haiku",
+  "shadow": false,
+  "decisions_model": "",
+  "decisions_min_confidence": 0.7
+}

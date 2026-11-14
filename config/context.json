@@ -1,0 +1,87 @@
+{
+  "_doc": "Per-job context budget (see docs/context.md). tools: built-in tools only, which also drops connectors; leave empty for jobs that need Slack, Drive, Linear or web. brain: files for the job's rule pack. pinned: core rule IDs copied into every brief.",
+  "pinned": [
+    "P01",
+    "P03",
+    "P21",
+    "G01",
+    "G02",
+    "G03",
+    "G06",
+    "G07",
+    "G09",
+    "S11",
+    "S12",
+    "S13"
+  ],
+  "jobs": {
+    "director": {
+      "tools": [
+        "Read"
+      ]
+    },
+    "specialist-synopsis": {
+      "tools": [
+        "Read",
+        "Edit"
+      ]
+    },
+    "distill": {
+      "tools": [
+        "Read",
+        "Edit",
+        "Write",
+        "Glob",
+        "Grep",
+        "Bash"
+      ]
+    },
+    "specialist-reply": {
+      "brain": [
+        "guardrails.md",
+        "style.md",
+        "mediums.md",
+        "priorities.md"
+      ]
+    },
+    "specialist-decision": {
+      "brain": [
+        "guardrails.md",
+        "style.md",
+        "priorities.md"
+      ]
+    },
+    "specialist-review": {
+      "brain": [
+        "guardrails.md",
+        "style.md",
+        "mediums.md",
+        "priorities.md"
+      ]
+    },
+    "learn": {
+      "tools": [
+        "WebSearch",
+        "WebFetch"
+      ],
+      "_why": "one-turn tutor reply from the topic's own state; no connectors"
+    },
+    "execedit": {
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Edit"
+      ]
+    },
+    "execledger": {
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Edit",
+        "Write"
+      ]
+    }
+  }
+}

@@ -1,0 +1,4 @@
+{
+ "_doc": "Connectors this brain reads, managed on the Connectors page (or by hand). Each: server (the MCP server name as Claude Code shows it, e.g. claude_ai_Slack), read_tools (the only tools runs may call: read, search, list, get), use (what leads look for there). Leads, sync, agents, chat and meeting runs get every listed read tool; write tools are never listed here (the executor has its own, used only on the owner's press). required: runs wait for these to connect before starting.",
+ "connectors": []
+}

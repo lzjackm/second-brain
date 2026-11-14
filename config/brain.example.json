@@ -1,0 +1,74 @@
+{
+ "_doc": "Who owns this brain. /onboard fills this in. Read by the app, the scripts and every prompt ({{OWNER}}, {{OWNER_FIRST}}, {{BRAIN_NAME}}, {{OWNER_TOKEN}}). This file is yours: template updates never touch it.",
+ "brain_name": "Second Brain",
+ "slug": "second-brain",
+ "owner_name": "",
+ "owner_first": "",
+ "owner_initials": "",
+ "owner_token": "me",
+ "owner_aliases": [
+  "me"
+ ],
+ "owner_emails": [],
+ "github_logins": [],
+ "timezone": "America/New_York",
+ "work_hours": [
+  9,
+  19
+ ],
+ "default_area": "work",
+ "source_dirs": [],
+ "repo_aliases": {},
+ "modules": {
+  "_doc": "Optional features; delete a key to switch it off. See docs/modules.md.",
+  "meetings": false,
+  "ledger_example": {
+   "path": "~/code/decisions",
+   "url": "https://github.com/your-org/decisions",
+   "name": "Decisions",
+   "area": "work"
+  },
+  "architect_example": {
+   "description": "Paste a client's question. It searches your specs and docs by authority, then a second agent checks every claim.",
+   "placeholder": "How does an integrator get paid, and when is the fee set?",
+   "search_dirs": [
+    "~/code"
+   ],
+   "sources": [
+    {
+     "dest": "specs",
+     "repo": "~/code/product",
+     "ref": "origin/main",
+     "paths": [
+      "docs/adr",
+      "docs/specs"
+     ]
+    },
+    {
+     "dest": "public-docs",
+     "repo": "~/code/docs-site",
+     "ref": "origin/main",
+     "paths": [
+      "content"
+     ]
+    }
+   ],
+   "authority": [
+    "`specs/docs/adr/`: decision records. Normative.",
+    "`specs/docs/specs/`: API specs.",
+    "`public-docs/content/`: public docs. Client-ready wording, but derived; check numbers against 1 and 2."
+   ],
+   "github": [
+    "your-org/product"
+   ],
+   "conflicts_file": "",
+   "notes": [
+    "Synonyms to search together: the public term and the internal one."
+   ]
+  },
+  "pipeline": false,
+  "shadow_router": {
+   "name": "Shadow router"
+  }
+ }
+}

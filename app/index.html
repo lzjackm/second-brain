@@ -1,0 +1,2022 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Second Brain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+/* Design system (Nov 13 refresh): Radix Mauve neutrals (warm, low-saturation grey) and one Iris accent.
+   Elevation by lighter surfaces, not shadows. Accent only for: the primary action, focus, unread, the active item, links. */
+:root, [data-theme="dark"] {
+  --bg: #121113; --rail: #121113; --surface: #1a191b; --raised: #232225; --raised-2: #2b292d;
+  --hover: rgba(255,255,255,.045); --select: rgba(255,255,255,.08); --line: rgba(255,255,255,.07); --line-soft: rgba(255,255,255,.045); --line-strong: rgba(255,255,255,.11); --line-hover: rgba(255,255,255,.17);
+  --ink: #eeeef0; --ink-2: #b5b2bc; --ink-3: #7c7a85; --ink-4: #4f4c56;
+  --accent: #5b5bd6; --accent-hover: #6e6ade; --accent-ink: #b1a9ff; --accent-bg: #202248;
+  --primary: #5b5bd6; --primary-hover: #6e6ade; --on-primary: #ffffff;
+  --link: #b1a9ff; --link-hover: #cdc7ff;
+  --ok: #3dd68c; --ok-bg: #132d21; --warn: #ffca16; --warn-bg: #302008; --bad: #ff9592; --bad-bg: #3b1219; --info: #70b8ff; --info-bg: #0d2847;
+  --field: rgba(255,255,255,.035); --field-hover: rgba(255,255,255,.055); --focus: #5b5bd6; --ring: #5b5bd6; --mine: #2b292d;
+  --shadow: 0 16px 48px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.08);
+}
+[data-theme="light"] {
+  --bg: #fdfcfd; --rail: #f8f7f9; --surface: #ffffff; --raised: #ffffff; --raised-2: #f2eff3;
+  --hover: rgba(0,0,0,.035); --select: rgba(0,0,0,.06); --line: rgba(0,0,0,.075); --line-soft: rgba(0,0,0,.05); --line-strong: rgba(0,0,0,.11); --line-hover: rgba(0,0,0,.18);
+  --ink: #211f26; --ink-2: #65636d; --ink-3: #8e8c99; --ink-4: #c8c7d1;
+  --accent: #5b5bd6; --accent-hover: #5151cd; --accent-ink: #5753c6; --accent-bg: #f0f1fe;
+  --primary: #5b5bd6; --primary-hover: #5151cd; --on-primary: #ffffff;
+  --link: #5753c6; --link-hover: #3e3a9e;
+  --ok: #218358; --ok-bg: #e6f6eb; --warn: #ab6400; --warn-bg: #fff7c2; --bad: #ce2c31; --bad-bg: #feebec; --info: #0d74ce; --info-bg: #e6f4fe;
+  --field: rgba(0,0,0,.025); --field-hover: rgba(0,0,0,.045); --focus: #5b5bd6; --ring: #5b5bd6; --mine: #f2eff3;
+  --shadow: 0 16px 48px rgba(0,0,0,.12), 0 0 0 1px rgba(0,0,0,.08);
+}
+:root { color-scheme: dark; } [data-theme="light"] { color-scheme: light; }
+:root { --r: 8px; --r-sm: 6px; --r-lg: 12px; --font: 'Inter', -apple-system, system-ui, sans-serif; --mono: 'JetBrains Mono', ui-monospace, monospace; --ease: 100ms ease-out; --spring: cubic-bezier(.16,1,.3,1); }
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 13px/20px var(--font); letter-spacing: -0.003em; -webkit-font-smoothing: antialiased; font-optical-sizing: auto; font-feature-settings: "cv11", "ss01"; }
+button, input, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--ring); }
+textarea:focus-visible, input:focus-visible { outline: none; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; } }
+a { color: var(--link); text-decoration: none; } a:hover { color: var(--link-hover); }
+svg.i { width: 16px; height: 16px; stroke: currentColor; stroke-width: 1.75; fill: none; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.mono { font-family: var(--mono); font-size: 12px; }
+.muted { color: var(--ink-3); } .soft { color: var(--ink-2); }
+kbd { font: 500 11px/1 var(--font); color: var(--ink-3); background: var(--raised-2); border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: 4px; padding: 2px 5px; min-width: 18px; text-align: center; display: inline-block; }
+
+.shell { display: grid; grid-template-columns: var(--rail-w, 224px) 372px 1fr; height: 100vh; transition: padding-right 220ms ease; }
+.shell.wide { grid-template-columns: var(--rail-w) 1fr; } .shell.wide #list { display: none; }
+.shell.slim:not(.wide) { grid-template-columns: var(--rail-w) 280px 1fr; }
+body.chat-open .shell:not(.wide) { grid-template-columns: var(--rail-w) 300px 1fr; }  /* squash, never hide: the list and item stay usable beside the drawer */
+body.chat-open .shell { padding-right: 420px; }
+
+/* Rail */
+#rail { background: var(--rail); border-right: 1px solid var(--line); display: flex; flex-direction: column; padding: 16px 10px; gap: 20px; overflow-y: auto; }
+.wordmark { padding: 0 2px 0 10px; font-weight: 600; font-size: 15px; letter-spacing: -0.01em; display: flex; justify-content: space-between; align-items: center; }
+.cmdk { display: flex; align-items: center; gap: 8px; margin: 0 2px; padding: 7px 10px; border-radius: var(--r); background: var(--field); border: 1px solid var(--line); color: var(--ink-3); cursor: pointer; transition: background var(--ease); }
+.cmdk:hover { background: var(--field-hover); } .cmdk span { flex: 1; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar .btn.ghost kbd { display: none; }  /* hidden kbd hints still took their width and pushed the menu onto a second line */
+body.chat-open .bar .btn.ghost kbd { display: none; }
+.group { display: flex; flex-direction: column; gap: 1px; }
+.glabel { padding: 0 10px 6px; color: var(--ink-3); font-size: 12px; font-weight: 500; }
+.nav { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: var(--r-sm); border: 0; background: transparent; color: var(--ink-2); cursor: pointer; text-align: left; transition: background var(--ease), color var(--ease); }
+.nav:hover { background: var(--hover); color: var(--ink); }
+.nav.on { background: var(--select); color: var(--ink); font-weight: 500; }
+.nav .lbl { flex: 1; } .nav .n { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.nav.on .n.hot { color: var(--ink); }
+.foot { margin-top: auto; display: flex; flex-direction: column; gap: 12px; padding: 0 10px; }
+.today { display: flex; align-items: center; gap: 10px; }
+.status { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-3); }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-4); flex: none; }
+.dot.live { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 25%, transparent); animation: pulse 1.2s ease-in-out infinite alternate; }
+@keyframes pulse { from { opacity: .45 } to { opacity: 1 } }
+
+/* List */
+#list { border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+.lhead { padding: 20px 16px 10px; display: flex; flex-direction: column; gap: 12px; }
+.lhead .t { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; display: flex; align-items: baseline; gap: 8px; }
+.lhead .t .c { font-size: 13px; font-weight: 400; color: var(--ink-3); }
+.chips { display: flex; gap: 4px; flex-wrap: wrap; }
+.chip { border: 1px solid var(--line); background: transparent; color: var(--ink-2); border-radius: 999px; padding: 3px 10px; font-size: 12px; cursor: pointer; transition: background var(--ease), color var(--ease), border-color var(--ease); }
+.chip:hover { background: var(--hover); color: var(--ink); } .chip.on { background: var(--select); border-color: var(--line-strong); color: var(--ink); }
+#rows { overflow-y: auto; flex: 1; padding: 4px 8px 16px; }
+.row { position: relative; display: flex; flex-direction: column; gap: 3px; padding: 11px 12px 11px 18px; border-radius: var(--r); cursor: pointer; transition: background var(--ease), opacity 220ms, transform 220ms, max-height 260ms, padding 260ms; max-height: 220px; overflow: hidden; }
+.row::before { content: ""; position: absolute; left: 6px; top: 13px; bottom: 13px; width: 3px; border-radius: 2px; background: transparent; }
+.row.p-hot::before { background: var(--bad); }
+.row:hover { background: var(--hover); } .row.sel { background: var(--select); }
+.row .title { font-weight: 500; line-height: 1.35; padding-right: 14px; }
+.row .next { font-size: 13px; color: var(--ink-2); line-height: 1.35; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.row .meta { display: flex; align-items: center; gap: 8px; margin-top: 3px; font-size: 12px; color: var(--ink-3); }
+.row .unread { position: absolute; top: 15px; right: 12px; width: 7px; height: 7px; border-radius: 50%; background: var(--info); }
+.row.leaving { opacity: 0; transform: translateX(24px); max-height: 0; padding-top: 0; padding-bottom: 0; }
+.tag { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-size: 12px; line-height: 18px; background: var(--select); color: var(--ink-2); white-space: nowrap; }
+.tag.warn { background: var(--warn-bg); color: var(--warn); } .tag.bad { background: var(--bad-bg); color: var(--bad); }
+.tag.ok { background: var(--ok-bg); color: var(--ok); } .tag.info { background: var(--info-bg); color: var(--info); }
+.tag.cat { background: transparent; border: 1px solid var(--line); color: var(--ink-2); } .tag.cat::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: var(--ink-3); }
+.tag.cat.info::before { background: var(--info); } .tag.cat.warn::before { background: var(--warn); } .tag.cat.ok::before { background: var(--ok); }
+
+.empty { margin: 72px auto; max-width: 300px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; color: var(--ink-2); }
+.empty .big { width: 56px; height: 56px; border-radius: 50%; background: var(--ok-bg); color: var(--ok); display: flex; align-items: center; justify-content: center; animation: pop 420ms cubic-bezier(.2,1.6,.4,1); }
+.empty .big svg.i { width: 26px; height: 26px; stroke-width: 2.25; }
+.empty .h { font-size: 17px; font-weight: 600; color: var(--ink); }
+@keyframes pop { from { transform: scale(.4); opacity: 0 } to { transform: scale(1); opacity: 1 } }
+
+/* Detail */
+#detail { overflow-y: auto; min-width: 0; }
+.focus { max-width: 760px; margin: 0 auto; padding: 18px 32px 64px; display: flex; flex-direction: column; gap: 20px; }
+.topbar { display: flex; align-items: center; gap: 8px; min-height: 32px; }
+.grow { flex: 1; }
+.iconbtn { position: relative; border: 0; background: transparent; color: var(--ink-2); width: 32px; height: 32px; border-radius: var(--r-sm); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: background var(--ease), color var(--ease); flex: none; }
+.iconbtn:hover, .iconbtn[data-open] { background: var(--hover); color: var(--ink); }
+.ttl { font-size: 24px; line-height: 1.25; font-weight: 600; letter-spacing: -0.022em; margin: 0; }
+.ctx { font-size: 15px; color: var(--ink-2); margin-top: 8px; white-space: pre-wrap; }
+.rec { display: flex; gap: 12px; padding: 14px 16px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--line); }
+.rec .lbl { font-size: 12px; color: var(--ink-3); font-weight: 500; margin-bottom: 2px; }
+.rec .txt { font-size: 15px; line-height: 1.45; }
+.rec svg.i { margin-top: 2px; color: var(--ink-3); }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.card.cur { border-color: var(--line-strong); }
+.chead { display: flex; align-items: center; gap: 10px; padding: 14px 16px 0; }
+.chead .k { font-size: 12px; color: var(--ink-3); font-weight: 500; }
+.stitle { padding: 6px 16px 0; font-size: 16px; font-weight: 500; letter-spacing: -0.01em; }
+.sline { padding: 4px 16px 0; font-size: 13px; color: var(--ink-2); }
+.sline.bad { color: var(--bad); }
+.cbody { padding: 12px 16px 16px; display: flex; flex-direction: column; gap: 12px; }
+textarea, input.text { width: 100%; border-radius: var(--r); background: var(--field); border: 1px solid var(--line); padding: 10px 12px; line-height: 1.5; resize: vertical; transition: background var(--ease), border-color var(--ease); }
+textarea:hover, input.text:hover { background: var(--field-hover); }
+textarea:focus, input.text:focus { outline: none; border-color: var(--focus); background: var(--field-hover); }
+textarea::placeholder, input.text::placeholder { color: var(--ink-3); }
+.draft { min-height: 96px; resize: none; overflow: hidden; }
+.target { font-size: 13px; color: var(--ink-3); display: flex; align-items: center; gap: 6px; }
+.srcline { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 13px; color: var(--ink-3); flex-wrap: wrap; } .srcline a { color: var(--ink-2); display: inline-flex; align-items: center; gap: 4px; } .srcline a:hover { color: var(--ink); } .srcline.bad { color: var(--bad); }
+.src { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink-2); max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.src:hover { color: var(--ink); border-color: var(--ink-3); }
+.checkline { display: flex; gap: 8px; align-items: flex-start; margin: 6px 16px 0; padding: 6px 10px; border-radius: 6px; font-size: 13px; line-height: 18px; }
+.checkline.block { background: var(--bad-bg); color: var(--bad); } .checkline.warn { background: var(--warn-bg); color: var(--warn); }
+.checkline.one span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.details .v { min-width: 0; }
+.checkline svg { flex: none; width: 14px; height: 14px; margin-top: 2px; }
+.conflicts { margin: 0; padding-left: 20px; display: grid; gap: 10px; font-size: 14px; line-height: 1.45; color: var(--ink-2); }
+.conflicts .ct { color: var(--ink); } .conflicts .lbl { color: var(--ink-3); margin-right: 4px; } .conflicts .soft { color: var(--ink-3); font-size: 13px; }
+body.chat-open.talk-wide .shell { padding-right: 560px; } body.talk-wide #drawer { width: 560px; }
+@media (max-width: 1440px) { body.chat-open.talk-wide .shell { padding-right: 480px; } body.talk-wide #drawer { width: 480px; } body.chat-open .shell:not(.wide) { grid-template-columns: var(--rail-w) 260px 1fr; } }
+.dbd.talk { display: flex; flex-direction: column; gap: 18px; }
+.tmsg.me { display: flex; justify-content: flex-end; } .tmsg.me .tb { max-width: 82%; background: var(--mine); border-radius: 14px; padding: 9px 13px; }
+.tmsg.me .text { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; font-size: 14px; } .tlbl { font-size: 11px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 2px; }
+.tmsg.ag { display: flex; gap: 10px; align-items: flex-start; } .tmsg.ag .tbody { flex: 1; min-width: 0; } .tav { flex: none; padding-top: 2px; }
+.tmsg.ag .md { font-size: 14px; line-height: 1.55; overflow-wrap: anywhere; } .tmsg.ag .md > :first-child { margin-top: 0; } .tmsg.ag .md > :last-child { margin-bottom: 0; }
+.tmsg.ag .md table { font-size: 13px; } .tmeta { font-size: 11.5px; color: var(--ink-3); margin-top: 6px; }
+.rcard { margin-top: 10px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); overflow: hidden; }
+.rcard .rhd { width: 100%; display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: transparent; border: 0; color: var(--ink); cursor: pointer; font: inherit; font-size: 14px; text-align: left; }
+.rcard .rhd:hover { background: var(--hover); }
+.think { display: flex; align-items: center; gap: 8px; color: var(--ink-2); font-size: 14px; } .tstate { color: var(--info); }
+.linkbtn { border: 0; background: transparent; color: var(--ink-3); cursor: pointer; font: inherit; font-size: 12.5px; text-decoration: underline; padding: 0; }
+#compose { resize: vertical; }
+.live { border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px 12px; display: grid; gap: 4px; font-size: 12.5px; color: var(--ink-3); }
+.live .who { display: flex; align-items: center; gap: 8px; color: var(--ink-2); font-size: 13px; margin-bottom: 2px; }
+.live .ln { font-family: var(--mono, ui-monospace, monospace); white-space: pre-wrap; word-break: break-word; } .live .ln.text { color: var(--ink-2); font-family: inherit; }
+.vote { display: inline-flex; gap: 2px; margin-right: 8px; }
+.vbtn { border: 0; background: transparent; color: var(--ink-3); width: 26px; height: 26px; border-radius: var(--r-sm); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: background var(--ease), color var(--ease); }
+.vbtn:hover { background: var(--hover); color: var(--ink); }
+.vbtn.on { color: var(--ok); } .vbtn.on.bad { color: var(--bad); }
+.vbtn svg.i { width: 15px; height: 15px; }
+.why { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; color: var(--ink-2); line-height: 1.45; } .why svg.i { margin-top: 2px; color: var(--ink-3); }
+.btn .to { font-weight: 400; opacity: .7; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+.cur .cbody { container-type: inline-size; }
+@container (max-width: 640px) { .bar .btn.ghost:not(.keep) .lbl { display: none; } .bar .btn.ghost { padding: 0 9px; } }
+.bar .iconbtn { flex-shrink: 0; }
+.bar { display: flex; align-items: center; gap: 2px; flex-wrap: nowrap; min-width: 0; } .bar .btn.ghost { padding: 0 10px; } .bar .btn.primary { margin-right: 6px; }
+.btn { position: relative; display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; border-radius: var(--r); border: 1px solid transparent; background: transparent; color: var(--ink); font-weight: 500; cursor: pointer; white-space: nowrap; transition: background var(--ease), border-color var(--ease), transform 80ms; }
+.btn:active { transform: translateY(1px); }
+.btn.primary { background: var(--primary); color: var(--on-primary); } .btn.primary:hover { background: var(--primary-hover); }
+.btn.primary kbd { background: transparent; border-color: color-mix(in srgb, var(--on-primary) 25%, transparent); color: color-mix(in srgb, var(--on-primary) 60%, transparent); }
+.btn.ghost { color: var(--ink-2); } .btn.ghost:hover { background: var(--hover); color: var(--ink); }
+.btn.line { border-color: var(--line-strong); } .btn.line:hover { background: var(--hover); }
+.btn.sm { height: 28px; padding: 0 10px; font-size: 13px; }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.badge-dot { position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; border-radius: 50%; background: var(--info); box-shadow: 0 0 0 2px var(--surface); }
+
+.upcoming { display: flex; flex-direction: column; margin-top: 8px; }
+.up { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-top: 1px solid var(--line-soft); font-size: 14px; color: var(--ink-2); }
+.up.done { color: var(--ink-3); text-decoration: line-through; text-decoration-color: var(--ink-4); }
+.check { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--ink-4); flex: none; display: flex; align-items: center; justify-content: center; }
+.check.done { background: var(--ok); border-color: var(--ok); color: var(--bg); }
+.check.done svg.i { width: 10px; height: 10px; stroke-width: 3; }
+.av { width: 22px; height: 22px; border-radius: 50%; font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; color: #fff; flex: none; letter-spacing: 0; }
+.av.me { background: var(--primary); color: var(--on-primary); } .av.bot { background: var(--raised-2); color: var(--ink-2); border: 1px solid var(--line-strong); }
+.av.bot svg.i { width: 12px; height: 12px; }
+
+.chatpill { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 14px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); cursor: pointer; text-align: left; transition: background var(--ease); }
+.chatpill:hover { background: var(--hover); color: var(--ink); }
+.chatpill .last { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+/* Chat drawer */
+#drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 420px; z-index: 30; background: var(--raised); border-left: 1px solid var(--line); box-shadow: -12px 0 40px rgba(0,0,0,.25); display: flex; flex-direction: column; transform: translateX(100%); transition: transform 220ms cubic-bezier(.2,.7,.2,1); }
+body.chat-open #drawer { transform: none; }
+body:not(.chat-open) #drawer { box-shadow: none; visibility: hidden; transition: transform 220ms cubic-bezier(.2,.7,.2,1), visibility 0s 220ms; }
+.dhd { display: flex; align-items: center; gap: 10px; padding: 14px 14px 12px 18px; border-bottom: 1px solid var(--line); }
+.dbd { flex: 1; overflow-y: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
+.dft { padding: 12px 14px 14px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.dft textarea { min-height: 64px; max-height: 200px; }
+.msg { display: flex; gap: 10px; align-items: flex-start; }
+.msg.me { flex-direction: row-reverse; }
+.bubble { max-width: 85%; padding: 8px 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); }
+.msg.me .bubble { background: var(--mine); border-color: transparent; }
+.bubble .who { font-size: 12px; color: var(--ink-3); margin-bottom: 2px; }
+.bubble .text { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; }
+.bubble .pd { margin-top: 8px; padding: 10px 12px; border-radius: var(--r); background: var(--field); border: 1px solid var(--line); white-space: pre-wrap; font-size: 13px; line-height: 1.5; max-height: 260px; overflow-y: auto; }
+.bubble .pact { margin-top: 8px; }
+.note { font-size: 13px; color: var(--ink-2); border-left: 2px solid var(--line-strong); padding: 2px 0 2px 10px; }
+.note .who { font-size: 12px; color: var(--ink-3); }
+.note .text { white-space: pre-wrap; }
+.thinking { font-size: 13px; color: var(--ink-3); display: flex; align-items: center; gap: 10px; }
+.dots { display: inline-flex; gap: 3px; } .dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--ink-3); animation: bounce 900ms infinite; } .dots i:nth-child(2) { animation-delay: 150ms; } .dots i:nth-child(3) { animation-delay: 300ms; }
+@keyframes bounce { 0%, 60%, 100% { transform: translateY(0); opacity: .5 } 30% { transform: translateY(-3px); opacity: 1 } }
+.seg { display: inline-flex; background: var(--field); border-radius: var(--r-sm); padding: 2px; }
+.seg button { border: 0; background: transparent; color: var(--ink-3); font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 5px; cursor: pointer; }
+.seg button.on { background: var(--raised-2); color: var(--ink); box-shadow: 0 0 0 1px var(--line-strong); }
+.dempty { color: var(--ink-3); font-size: 13px; margin: auto 0; text-align: center; padding: 0 16px; }
+
+.details { display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--ink-2); padding: 14px 16px; border-radius: var(--r); border: 1px dashed var(--line-strong); }
+.details .row2 { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 12px; }
+.details .row2 > span:first-child { color: var(--ink-3); }
+.details .v { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Menus, palette, dialogs, toast */
+.menu { position: fixed; z-index: 45; min-width: 240px; background: var(--raised); border-radius: 10px; box-shadow: var(--shadow); padding: 6px; display: none; }
+.menu.show { display: block; animation: drop 140ms ease-out; }
+@keyframes drop { from { opacity: 0; transform: translateY(-4px) } to { opacity: 1; transform: none } }
+.mi { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 0; background: transparent; border-radius: var(--r-sm); cursor: pointer; text-align: left; color: var(--ink); }
+.mi:hover, .mi.on { background: var(--hover); } .mi .lbl { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; } .mi.bad { color: var(--bad); }
+.msep { height: 1px; background: var(--line); margin: 6px 4px; }
+.overlay { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,.45); display: none; align-items: flex-start; justify-content: center; padding: 12vh 16px 16px; }
+.overlay.show { display: flex; }
+.palette { width: 600px; max-width: 100%; max-height: 70vh; background: var(--raised); border-radius: 12px; box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden; animation: drop 140ms ease-out; }
+.palette input { border: 0; border-bottom: 1px solid var(--line); background: transparent; padding: 16px 18px; font-size: 16px; outline: none; }
+.plist { overflow-y: auto; padding: 6px; }
+.plist .grp { padding: 10px 10px 4px; font-size: 12px; color: var(--ink-3); font-weight: 500; }
+.dialog { width: 520px; max-width: 100%; background: var(--raised); border-radius: 12px; box-shadow: var(--shadow); padding: 20px; display: flex; flex-direction: column; gap: 12px; animation: drop 140ms ease-out; }
+.dialog .h { font-size: 16px; font-weight: 600; } .dialog .actions { display: flex; justify-content: flex-end; gap: 8px; }
+.report { width: min(1100px, calc(100vw - 64px)); height: calc(100vh - 64px); max-height: none; overflow-y: auto; padding: 28px 40px 40px; }
+.report .rtop { position: sticky; top: -28px; margin: -28px -40px 16px; padding: 16px 40px; background: var(--raised); border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 12px; z-index: 1; }
+#report.overlay { align-items: center; padding: 32px; }
+.report #report-body { font-size: 15.5px; line-height: 1.65; max-width: 860px; margin: 0 auto; }
+#toast { position: fixed; bottom: 24px; left: 50%; transform: translate(-50%, 16px); opacity: 0; background: var(--primary); color: var(--on-primary); padding: 9px 14px; border-radius: 999px; font-weight: 500; display: flex; align-items: center; gap: 8px; box-shadow: var(--shadow); transition: all 200ms ease-out; z-index: 60; pointer-events: none; }
+#toast.show { transform: translate(-50%, 0); opacity: 1; } #toast.bad { background: var(--bad-bg); color: var(--bad); }
+
+.rate { width: 28px; height: 28px; }
+.rate.on.up { color: var(--ok); background: var(--ok-bg); } .rate.on.down { color: var(--bad); background: var(--bad-bg); }
+.fblist { display: flex; flex-direction: column; gap: 6px; padding-top: 8px; border-top: 1px solid var(--line-soft); }
+.fbitem { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; color: var(--ink-2); }
+.page { max-width: 820px; margin: 0 auto; padding: 36px 32px 64px; display: flex; flex-direction: column; gap: 20px; }
+.page .h { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; }
+.md h2 { font-size: 17px; font-weight: 600; margin: 28px 0 10px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.md h1 { display: none; } .md p { margin: 10px 0; color: var(--ink-2); } .md ul, .md ol { padding-left: 20px; margin: 8px 0; } .md li { margin: 6px 0; } .md li::marker { color: var(--ink-4); }
+.md strong { font-weight: 600; } .md table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13px; } .md th, .md td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); } .md th { color: var(--ink-3); font-weight: 500; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.hood { border-top: 1px solid var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 16px; } .hood[open] > * + * { margin-top: 16px; }
+.hood summary { cursor: pointer; color: var(--ink-2); font-weight: 500; list-style: none; } .hood summary::before { content: "▸ "; color: var(--ink-3); } .hood[open] summary::before { content: "▾ "; }
+.today-line { font-size: 15px; color: var(--ink-2); } .today-line b { color: var(--ink); font-weight: 600; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 6px; }
+.stat .v { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+
+/* learn */
+.teach { display: flex; gap: 8px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 8px 8px 8px 16px; }
+.teach input { flex: 1; border: 0; background: transparent; font-size: 16px; padding: 8px 0; color: var(--ink); outline: none; }
+.teach label { font-size: 12px; color: var(--ink-3); display: flex; gap: 6px; align-items: center; white-space: nowrap; cursor: pointer; }
+.codex { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.ccard { text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; cursor: pointer; color: var(--ink); transition: border-color var(--ease), transform 120ms; }
+.ccard:hover { border-color: var(--line-strong); transform: translateY(-1px); }
+.ccard .t { font-weight: 600; font-size: 15px; } .ccard .sum { font-size: 13px; color: var(--ink-2); line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.ccard .meta { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--ink-3); flex-wrap: wrap; }
+.pbar { height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; } .pbar i { display: block; height: 100%; background: var(--ok); border-radius: 999px; transition: width 400ms; }
+.minibars { display: flex; gap: 3px; } .minibars i { flex: 1; height: 4px; border-radius: 2px; background: var(--line); } .minibars i.l1 { background: color-mix(in srgb, var(--ok) 25%, var(--line)); } .minibars i.l2 { background: color-mix(in srgb, var(--ok) 45%, var(--line)); } .minibars i.l3 { background: color-mix(in srgb, var(--ok) 65%, var(--line)); } .minibars i.l4 { background: color-mix(in srgb, var(--ok) 85%, var(--line)); } .minibars i.l5 { background: var(--ok); }
+.tag.due { background: var(--warn-bg); color: var(--warn); } .tag.mastered { background: var(--ok-bg); color: var(--ok); }
+.lpage { max-width: 1100px; height: 100vh; box-sizing: border-box; padding-bottom: 20px; }
+.ltop { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.lsess { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; flex: 1; min-height: 0; }
+.lconv { display: flex; flex-direction: column; min-height: 0; }
+#lmsgs { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 14px; padding: 4px 4px 12px 0; }
+#lhist { display: flex; flex-direction: column; gap: 14px; }
+.lconv .bubble { max-width: 92%; } .lconv .bubble .text p { margin: 0 0 8px; } .lconv .bubble .text p:last-child { margin: 0; }
+.lconv .bubble .src { margin-top: 6px; font-size: 12px; color: var(--ink-3); } .lconv .bubble .src a { color: var(--ink-3); }
+.lconv .msg.err .bubble { border-color: var(--bad); }
+.lcomp { flex: none; border-top: 1px solid var(--line); padding: 10px 0 0; display: flex; flex-direction: column; gap: 8px; }
+.lcomp textarea { min-height: 44px; max-height: 200px; resize: none; overflow-y: auto; }
+.lside { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+.smap { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.srow { display: flex; flex-direction: column; gap: 5px; } .srow .top { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; } .srow .lv { color: var(--ink-3); font-size: 12px; white-space: nowrap; }
+.segs { display: flex; gap: 3px; } .segs i { flex: 1; height: 6px; border-radius: 2px; background: var(--line); } .segs i.on { background: var(--ok); } .segs i.tgt { box-shadow: inset 0 0 0 1px var(--line-strong); }
+.lnotes { font-size: 13px; } .lnotes h2 { font-size: 14px; margin: 16px 0 6px; padding-bottom: 4px; }
+@media (max-width: 900px) { .lpage { height: auto; } .lsess { grid-template-columns: 1fr; } .lside { order: -1; } #lmsgs { max-height: 60vh; } }
+/* architect */
+.askbox { display: flex; flex-direction: column; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+.askbox textarea { border: 0; background: transparent; padding: 4px; resize: vertical; } .askbox textarea:focus { background: transparent; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r-sm); overflow: hidden; } .seg button { border: 0; background: transparent; padding: 4px 10px; font-size: 12px; color: var(--ink-2); cursor: pointer; } .seg button.on { background: var(--select); color: var(--ink); }
+.card.mtg { padding: 0; width: 100%; box-sizing: border-box; } .mtg-rep { font-size: 14px; } .agenda { display: flex; flex-direction: column; gap: 2px; } .ag { border-radius: var(--r); padding: 8px 10px; } .ag.open { background: var(--hover); } .ag-head { all: unset; cursor: pointer; display: flex; gap: 10px; align-items: baseline; width: 100%; box-sizing: border-box; } .ag-rank { color: var(--ink-3); font-variant-numeric: tabular-nums; min-width: 16px; } .ag-title { flex: 1; } .ag-owner { font-size: 12px; color: var(--ink-3); padding: 1px 8px; border: 1px solid var(--line-strong); border-radius: 999px; white-space: nowrap; } .ag-sub { font-size: 13px; color: var(--ink-3); padding-left: 26px; } .ag-more { display: flex; flex-direction: column; gap: 6px; padding: 8px 0 4px 26px; font-size: 14px; } .ag-more .lbl, .ag-general .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); margin-right: 6px; } .ag-note { display: flex; gap: 8px; align-items: flex-end; } .ag-note textarea { flex: 1; resize: vertical; font: inherit; font-size: 13px; background: transparent; color: var(--ink); border: 1px solid var(--line-strong); border-radius: var(--r); padding: 6px 8px; } .ag-notes { margin: 0; padding-left: 18px; font-size: 13px; } .ag-general { display: flex; flex-direction: column; gap: 6px; padding: 10px; border-top: 1px solid var(--line-soft); margin-top: 6px; }
+.mtg-step { display: flex; flex-direction: column; gap: 6px; padding: 10px 0; border-top: 1px solid var(--line-soft); }
+.alist { display: flex; flex-direction: column; gap: 2px; } .arow { text-align: left; border: 0; background: transparent; color: var(--ink); padding: 10px 12px; border-radius: var(--r); cursor: pointer; display: flex; flex-direction: column; gap: 4px; } .arow:hover { background: var(--hover); }
+.arow .aq { font-weight: 500; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; } .arow .meta { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--ink-3); }
+.aturn { display: flex; flex-direction: column; gap: 12px; margin-bottom: 8px; }
+.acard .ans { font-size: 15px; } .acard .ans p { color: var(--ink); } .acard .ans.plain { white-space: pre-wrap; line-height: 1.55; color: var(--ink); }
+.qcov { display: flex; flex-wrap: wrap; gap: 6px; }
+.inote { border-left: 2px solid var(--line-strong); padding: 2px 0 2px 12px; font-size: 13px; color: var(--ink-2); } .inote .lbl { font-size: 12px; color: var(--ink-3); font-weight: 500; margin-bottom: 4px; }
+.inote.warn { border-left-color: var(--warn); } .inote.bad { border-left-color: var(--bad); } .inote ul { margin: 4px 0; padding-left: 18px; } .inote p { margin: 4px 0; }
+.claim { padding: 8px 0; border-top: 1px solid var(--line-soft); font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
+.claim .src { font-size: 12px; color: var(--ink-2); } .claim .quote { color: var(--ink-3); font-style: italic; margin-top: 2px; }
+.steps { margin: 6px 0 0; padding-left: 18px; font-size: 12px; color: var(--ink-3); font-family: var(--mono); } .steps li { margin: 2px 0; }
+@media (max-width: 1280px) { body.chat-open .shell { padding-right: 380px; } #drawer { width: 380px; } body.chat-open .shell:not(.wide) { grid-template-columns: 0 240px 1fr; } body.chat-open #rail { display: none; } body.chat-open .shell:not(.wide) #list { grid-column: 2; } body.chat-open .shell:not(.wide) #detail { grid-column: 3; } }
+@media (max-width: 1100px) { .shell { grid-template-columns: var(--rail-w) 320px 1fr; } .focus { padding: 16px 20px 48px; } }
+@media (max-width: 760px) {
+  .shell, .shell.wide { grid-template-columns: 1fr; height: auto; }
+  #rail { border-right: 0; border-bottom: 1px solid var(--line); gap: 10px; } .group { flex-direction: row; flex-wrap: wrap; } .glabel { display: none; } .foot { margin-top: 0; }
+  #list { border-right: 0; max-height: 50vh; } .focus, .page { padding: 16px; } #drawer { width: 100%; }
+}
+
+/* ======================= Nov 13 refresh: components ======================= */
+/* Numbers line up */
+.nav .n, .row .meta, .tag, kbd, .stat .v, .tmeta, .today-line { font-variant-numeric: tabular-nums; }
+svg.i { stroke-width: 1.6; }
+
+/* Shell: sidebar and list sit on the base; the reading pane is one step lighter */
+:root { --rail-w: 224px; }  /* one sidebar width in every layout */
+.shell { grid-template-columns: var(--rail-w) 372px 1fr; }
+#rail { background: var(--rail); border-right: 1px solid var(--line); padding: 14px 10px 12px; gap: 18px; }
+#list { background: var(--bg); border-right: 1px solid var(--line); }
+#detail { background: var(--surface); }
+
+/* Sidebar: dimmer than content; 28px items */
+.wordmark { padding: 2px 4px 0 8px; font-size: 14px; font-weight: 600; letter-spacing: -0.012em; }
+.wordmark .iconbtn { width: 28px; height: 28px; color: var(--ink-3); }
+.cmdk { padding: 5px 8px; margin: 0; border-radius: var(--r-sm); background: transparent; border: 1px solid var(--line); color: var(--ink-3); font-size: 13px; }
+.cmdk:hover { background: var(--hover); border-color: var(--line-strong); }
+.group { gap: 1px; }
+.glabel { padding: 0 8px 4px; font-size: 12px; font-weight: 500; color: var(--ink-3); }
+.nav { height: 28px; padding: 0 8px; gap: 8px; color: var(--ink-2); font-size: 13px; border-radius: var(--r-sm); position: relative; }
+.nav svg.i { width: 15px; height: 15px; color: var(--ink-3); }
+.nav:hover { background: var(--hover); color: var(--ink); }
+.nav.on { background: var(--select); color: var(--ink); font-weight: 500; }
+.nav.on svg.i { color: var(--ink); }
+.nav .n { font-size: 12px; color: var(--ink-3); }
+.nav.on .n.hot, .nav .n.hot { color: var(--accent-ink); font-weight: 500; }
+.foot { padding: 0 8px; gap: 8px; }
+.status { font-size: 12px; color: var(--ink-3); }
+
+/* List pane */
+.lhead { padding: 18px 16px 8px; gap: 10px; }
+.lhead .t { font-size: 15px; font-weight: 600; letter-spacing: -0.009em; }
+.lhead .t .c { font-size: 12px; color: var(--ink-3); font-weight: 500; }
+.chips { gap: 2px; }
+.chip { border: 0; border-radius: var(--r-sm); padding: 2px 8px; font-size: 12px; font-weight: 500; color: var(--ink-3); background: transparent; }
+.chip.warn { color: var(--warn); background: var(--warn-bg); cursor: default; }
+.chip:hover { color: var(--ink); background: var(--hover); }
+.chip.on { background: var(--select); color: var(--ink); border: 0; }
+#rows { padding: 2px 8px 16px; }
+.row { padding: 9px 12px 9px 16px; gap: 2px; border-radius: var(--r-sm); }
+.row::before { left: 4px; top: 10px; bottom: 10px; width: 2px; }
+.row.p-hot::before { background: var(--bad); }
+.row:hover { background: var(--hover); }
+.row.sel { background: var(--select); }
+.row.sel::before { background: var(--accent); }
+.row .title { font-size: 13px; font-weight: 500; line-height: 20px; color: var(--ink); }
+.row .next { font-size: 13px; line-height: 20px; color: var(--ink-3); -webkit-line-clamp: 1; }
+.row .meta { margin-top: 2px; gap: 10px; font-size: 12px; }
+.row .unread { top: 15px; right: 12px; width: 6px; height: 6px; background: var(--accent); }
+
+/* Tags: a dot and grey text; colour only when it needs attention */
+.tag { padding: 0; background: transparent; color: var(--ink-3); font-size: 12px; font-weight: 500; line-height: 18px; border-radius: 4px; }
+.tag.cat { border: 0; padding: 0; color: var(--ink-3); }
+.tag.cat::before { width: 6px; height: 6px; }
+.tag.warn { background: transparent; color: var(--warn); }
+.tag.bad { background: var(--bad-bg); color: var(--bad); padding: 0 6px; }
+.tag.ok { background: transparent; color: var(--ok); } .tag.info { background: transparent; color: var(--info); }
+.tag.due.warn, .tag.warn.fill { background: var(--warn-bg); padding: 0 6px; }
+
+/* Reading pane: one boxed thing (the current step); everything else is space and hairlines */
+.focus { max-width: 720px; padding: 20px 40px 72px; gap: 24px; }
+.topbar { min-height: 28px; gap: 10px; }
+.topbar .btn.sm { color: var(--ink-3); }
+.ttl { font-size: 21px; line-height: 28px; font-weight: 600; letter-spacing: -0.019em; }
+.ctx { font-size: 14px; line-height: 22px; color: var(--ink-2); margin-top: 6px; }
+.srcline { margin-top: 10px; font-size: 12px; gap: 6px; }
+.src { padding: 1px 8px; border: 1px solid var(--line-strong); border-radius: 999px; font-size: 12px; color: var(--ink-2); }
+.src:hover { border-color: var(--line-hover); color: var(--ink); }
+
+.card { background: transparent; border: 0; border-radius: 0; overflow: visible; }
+.card.cur { background: var(--raised); border: 1px solid var(--line-strong); border-radius: var(--r-lg); overflow: hidden; }
+[data-theme="light"] .card.cur { background: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.04); }
+.chead { padding: 14px 16px 0; }
+.chead .k { font-size: 12px; font-weight: 500; color: var(--ink-3); }
+.card:not(.cur) .chead { padding: 0 0 6px; }
+.stitle { padding: 4px 16px 0; font-size: 15px; font-weight: 600; letter-spacing: -0.009em; }
+.cbody { padding: 12px 16px 14px; gap: 12px; }
+textarea, input.text { border-radius: var(--r); background: var(--field); border: 1px solid var(--line-strong); font-size: 14px; line-height: 22px; }
+textarea:focus, input.text:focus { border-color: var(--accent); background: var(--field); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+.draft { min-height: 88px; padding: 10px 12px; }
+.why { font-size: 14px; line-height: 22px; }
+.checkline { margin: 8px 16px 0; padding: 5px 10px; font-size: 12px; border-radius: var(--r-sm); }
+.checkline.warn { background: color-mix(in srgb, var(--warn) 10%, transparent); }
+.checkline.block { background: var(--bad-bg); }
+
+.upcoming { margin-top: 0; }
+.up { padding: 8px 0; border-top: 1px solid var(--line-soft); font-size: 14px; color: var(--ink-2); gap: 12px; }
+.up:first-child { border-top: 0; }
+.up.done { color: var(--ink-3); text-decoration: none; }
+.donebtn { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 13px; color: var(--ink-3); }
+.donebtn:hover { color: var(--ink); }
+.check { width: 15px; height: 15px; border: 1.5px solid var(--ink-4); }
+.check.done { background: transparent; border-color: var(--ink-4); color: var(--ink-3); }
+.av { width: 20px; height: 20px; font-size: 9px; }
+.av.me { background: var(--accent); color: #fff; }
+.av.bot { background: var(--raised-2); border-color: var(--line-strong); }
+
+.details { border: 0; border-top: 1px solid var(--line); border-radius: 0; padding: 16px 0 0; gap: 10px; font-size: 13px; }
+.details .row2 { grid-template-columns: 120px minmax(0, 1fr); }
+.chatpill { border: 1px solid var(--line); background: transparent; border-radius: var(--r); padding: 8px 12px; font-size: 13px; }
+.chatpill:hover { background: var(--hover); }
+
+/* Buttons: 32px; one accent primary; ghost for the rest */
+.btn { height: 32px; padding: 0 12px; border-radius: var(--r-sm); font-size: 13px; font-weight: 500; gap: 6px; transition: background var(--ease), color var(--ease), border-color var(--ease); }
+.btn:active { transform: none; }
+.btn.primary { background: var(--accent); color: #fff; } .btn.primary:hover { background: var(--accent-hover); }
+.btn.primary kbd { color: rgba(255,255,255,.75); border-color: rgba(255,255,255,.28); background: transparent; }
+.btn .to { opacity: .8; }
+.btn.ghost { color: var(--ink-2); } .btn.ghost:hover { background: var(--hover); color: var(--ink); }
+.btn.sm { height: 28px; padding: 0 10px; font-size: 12px; }
+.btn:not(.primary):not(.ghost) { background: var(--raised); border-color: var(--line-strong); color: var(--ink); }
+.btn:not(.primary):not(.ghost):hover { border-color: var(--line-hover); }
+.iconbtn { width: 30px; height: 30px; color: var(--ink-3); }
+.iconbtn:hover, .iconbtn[data-open] { color: var(--ink); background: var(--hover); }
+kbd { font: 500 11px/16px var(--font); color: var(--ink-3); background: var(--field); border: 1px solid var(--line-strong); border-bottom-width: 1px; border-radius: 4px; padding: 0 4px; min-width: 18px; height: 18px; }
+.vbtn { color: var(--ink-4); } .vbtn:hover { color: var(--ink); }
+
+/* Empty states: one quiet line */
+.empty { margin: 96px auto; gap: 6px; color: var(--ink-3); font-size: 13px; }
+.empty .h { font-size: 14px; font-weight: 500; color: var(--ink-2); }
+.empty .big { width: 40px; height: 40px; background: transparent; color: var(--ink-3); border: 1px solid var(--line-strong); animation: none; }
+.empty .big svg.i { width: 18px; height: 18px; stroke-width: 2; }
+
+/* Drawer and chat (Claude-app pattern: your messages in bubbles, the agent's as plain text) */
+#drawer { background: var(--surface); border-left: 1px solid var(--line); box-shadow: none; transition: transform 220ms var(--spring); }
+.dhd { padding: 12px 12px 12px 18px; border-bottom: 1px solid var(--line); }
+.dbd { padding: 20px 20px; gap: 16px; }
+.dbd.talk { gap: 24px; }
+.tmsg.me .tb { background: var(--mine); border-radius: 16px; padding: 8px 12px; max-width: 80%; }
+.tmsg.me .text, .tmsg.ag .md { font-size: 14px; line-height: 22px; }
+.tav { display: none; }
+.tmsg.ag .md p { color: var(--ink); margin: 0 0 12px; }
+.tmeta { font-size: 11px; color: var(--ink-4); }
+.rcard { border: 1px solid var(--line-strong); background: transparent; border-radius: var(--r); }
+.rcard .rhd { padding: 9px 12px; font-size: 13px; }
+.think { font-size: 13px; color: var(--ink-3); }
+.live { border: 0; padding: 4px 0 0 12px; border-left: 2px solid var(--line-strong); border-radius: 0; font-size: 12px; }
+.dft { padding: 12px 16px 16px; border-top: 0; }
+.dft textarea, #compose { border-radius: var(--r-lg); background: var(--bg); border: 1px solid var(--line-strong); min-height: 48px; padding: 12px 14px; }
+.seg { background: transparent; border: 0; padding: 0; gap: 2px; }
+.seg button { border-radius: var(--r-sm); color: var(--ink-3); padding: 3px 8px; }
+.seg button.on { background: var(--select); color: var(--ink); box-shadow: none; }
+.bubble { border-radius: 14px; background: var(--raised); border-color: var(--line); }
+.msg.me .bubble { background: var(--mine); }
+
+/* Menus, dialogs, toast */
+.menu { background: var(--raised-2); border-radius: 10px; padding: 4px; }
+[data-theme="light"] .menu { background: #fff; }
+.mi { padding: 6px 8px; font-size: 13px; }
+.overlay { background: rgba(0,0,0,.5); }
+[data-theme="light"] .overlay { background: rgba(20,18,26,.22); }
+.dialog, .palette { background: var(--raised); border-radius: var(--r-lg); }
+[data-theme="light"] .dialog, [data-theme="light"] .palette { background: #fff; }
+.palette input { font-size: 15px; padding: 14px 16px; }
+#toast { background: var(--raised-2); color: var(--ink); border-radius: var(--r); box-shadow: var(--shadow); font-size: 13px; padding: 8px 14px; }
+[data-theme="light"] #toast { background: #211f26; color: #fff; }
+
+/* Pages */
+.page { max-width: 760px; padding: 32px 40px 72px; gap: 24px; }
+.page .h { font-size: 21px; line-height: 28px; font-weight: 600; letter-spacing: -0.019em; }
+.md p { color: var(--ink-2); } .md h2 { font-size: 15px; letter-spacing: -0.009em; border-bottom-color: var(--line); }
+.stats { grid-template-columns: repeat(4, 1fr); gap: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.stat { background: transparent; border: 0; border-radius: 0; padding: 18px 20px 18px 0; gap: 4px; }
+.stat + .stat { padding-left: 20px; border-left: 1px solid var(--line); }
+.stat .v { font-size: 26px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em; }
+.ccard, .smap, .teach, .askbox { background: var(--raised); border-color: var(--line-strong); border-radius: var(--r-lg); }
+.card.mtg { background: transparent; border: 0; border-top: 1px solid var(--line-soft); border-radius: 0; }
+.arow { border-radius: var(--r-sm); } .arow:hover { background: var(--hover); }
+.report .rtop { background: var(--raised); }
+.status .dot { width: 6px !important; height: 6px !important; min-width: 6px; padding: 0; border-radius: 50%; }
+.dot.live { box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 20%, transparent); }
+.tag.cat.warn, .tag.cat.ok, .tag.cat.info, .tag.cat.bad { background: transparent; color: var(--ink-3); padding: 0; }
+.tag.cat.bad::before { background: var(--bad); }
+@container (max-width: 680px) { .bar .btn.ghost:not(.keep) .lbl { display: none; } }
+
+.palette input:focus { box-shadow: none; border-color: var(--line); background: transparent; }
+.live .ln { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; color: var(--ink-3); }
+.live .ln.text { white-space: normal; }
+@container (max-width: 620px) { .btn .to { max-width: 150px; } }
+@media (max-width: 1100px) { :root { --rail-w: 200px; } .shell { grid-template-columns: var(--rail-w) 320px 1fr; } .focus { padding: 16px 24px 48px; } }
+@media (max-width: 760px) {
+  .shell, .shell.wide, .shell.slim:not(.wide), body.chat-open .shell:not(.wide) { grid-template-columns: 1fr !important; height: auto; }
+  #rail { padding: 12px; } #list { max-height: 50vh; } #list, #detail { grid-column: 1 !important; }
+  .focus, .page { padding: 16px; }
+}
+/* Drawer chrome: tabs, one-line context, a single composer with the send button inside */
+.dhd { padding: 10px 10px 0 12px; border-bottom: 0; gap: 8px; }
+.dtabs { display: inline-flex; gap: 2px; }
+.dtabs button { border: 0; background: transparent; color: var(--ink-3); font: 500 13px/20px var(--font); padding: 4px 10px; border-radius: var(--r-sm); cursor: pointer; transition: background var(--ease), color var(--ease); }
+.dtabs button:hover { color: var(--ink); background: var(--hover); }
+.dtabs button.on { color: var(--ink); background: var(--select); }
+.dsub { padding: 6px 22px 12px; font-size: 12px; color: var(--ink-3); border-bottom: 1px solid var(--line); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tstate { font-size: 12px; color: var(--accent-ink); margin-right: 4px; }
+.dft { padding: 12px 16px 16px; }
+.composer { position: relative; display: flex; align-items: flex-end; gap: 8px; background: var(--bg); border: 1px solid var(--line-strong); border-radius: 14px; padding: 6px 6px 6px 14px; transition: border-color var(--ease), box-shadow var(--ease); }
+.composer:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent); }
+.composer textarea, .dft .composer textarea, .composer #compose { flex: 1; border: 0 !important; background: transparent !important; box-shadow: none !important; padding: 6px 0 !important; min-height: 24px !important; max-height: 200px; resize: none; font-size: 14px; line-height: 22px; border-radius: 0 !important; }
+.sendbtn { flex: none; height: 32px; min-width: 32px; border-radius: 10px; border: 0; background: var(--accent); color: #fff; display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: background var(--ease), opacity var(--ease); }
+.sendbtn.wide { padding: 0 12px; font: 500 13px/20px var(--font); }
+.sendbtn:hover { background: var(--accent-hover); }
+.sendbtn svg.i { width: 15px; height: 15px; }
+.composer:has(textarea:placeholder-shown) .sendbtn:not(.wide) { opacity: .35; }
+
+/* Tooltip: app-styled, shows after 150ms (the browser's own waits about a second) */
+#tip { position: fixed; z-index: 80; pointer-events: none; background: var(--raised-2); color: var(--ink); border: 1px solid var(--line-strong); box-shadow: 0 6px 20px rgba(0,0,0,.28); font: 500 12px/16px var(--font); padding: 5px 8px; border-radius: 6px; max-width: 280px; opacity: 0; transform: translateY(2px); transition: opacity 80ms ease-out, transform 80ms ease-out; }
+#tip.show { opacity: 1; transform: none; }
+[data-theme="light"] #tip { background: #211f26; color: #fff; border-color: transparent; }
+.fpill { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; border: 0; background: var(--select); color: var(--ink); border-radius: 999px; padding: 1px 6px 1px 9px; font: 500 12px/18px var(--font); cursor: pointer; }
+.fpill svg.i { width: 12px; height: 12px; color: var(--ink-3); } .fpill:hover svg.i { color: var(--ink); }
+.lhead .t { align-items: center; } .lhead .iconbtn { width: 28px; height: 28px; margin-right: -6px; }
+/* Meetings: a Google Calendar style week */
+.cal { display: flex; flex-direction: column; height: 100vh; min-height: 0; }
+.calbar { display: flex; align-items: center; gap: 16px; padding: 16px 24px 12px; }
+.calbar .h { font-size: 21px; line-height: 28px; font-weight: 600; letter-spacing: -0.019em; }
+.calnav { display: flex; align-items: center; gap: 2px; } .calnav .btn { margin-right: 6px; }
+.calrange { margin-left: 8px; font-size: 15px; font-weight: 500; color: var(--ink); }
+.calwrap { flex: 1; min-height: 0; display: flex; border-top: 1px solid var(--line); }
+.calgrid { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.calhead { display: grid; grid-template-columns: 56px repeat(var(--days), minmax(0, 1fr)); border-bottom: 1px solid var(--line); }
+.dayhead { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 0 10px; border-left: 1px solid var(--line-soft); }
+.dayhead .dow { font-size: 11px; font-weight: 500; color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em; }
+.dayhead .dnum { font-size: 20px; line-height: 32px; width: 32px; text-align: center; border-radius: 50%; color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
+.dayhead.past .dnum, .dayhead.past .dow { color: var(--ink-3); }
+.dayhead.today .dow { color: var(--accent-ink); } .dayhead.today .dnum { background: var(--accent); color: #fff; }
+.calbody { flex: 1; min-height: 0; overflow-y: auto; }
+.calinner { position: relative; display: grid; grid-template-columns: 56px repeat(var(--days), minmax(0, 1fr)); }
+.calinner .gutter { position: relative; }
+.hl { position: absolute; right: 8px; transform: translateY(-50%); font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.daycol { position: relative; border-left: 1px solid var(--line-soft); }
+.daycol.today { background: color-mix(in srgb, var(--accent) 4%, transparent); }
+.hline { position: absolute; left: 0; right: 0; border-top: 1px solid var(--line-soft); }
+.ev { position: absolute; display: flex; flex-direction: column; align-items: flex-start; gap: 0; overflow: hidden; text-align: left; border: 0; border-left: 3px solid var(--accent); border-radius: 6px; padding: 3px 6px; cursor: pointer;
+  background: color-mix(in srgb, var(--accent) 32%, var(--surface)); color: var(--ink); transition: filter var(--ease), box-shadow var(--ease); }
+[data-theme="light"] .ev { background: color-mix(in srgb, var(--accent) 14%, #fff); }
+.ev:hover { filter: brightness(1.12); }
+.ev.on { box-shadow: 0 0 0 2px var(--accent); }
+.ev.past { opacity: .72; }
+.ev.prepped { border-left-color: var(--ok); }
+.ev .et { font-size: 12px; font-weight: 600; line-height: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.ev .em { font-size: 11px; line-height: 15px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.ev .em .tag { font-size: 11px; }
+.nowline { position: absolute; left: -1px; right: 0; border-top: 2px solid #ea4335; z-index: 2; pointer-events: none; }
+.nowline::before { content: ""; position: absolute; left: -5px; top: -6px; width: 10px; height: 10px; border-radius: 50%; background: #ea4335; }
+.mtg-panel { width: 448px; flex: none; border-left: 1px solid var(--line); background: var(--surface); display: flex; flex-direction: column; min-height: 0; }
+.mp-head { display: flex; gap: 8px; align-items: flex-start; padding: 16px 12px 12px 20px; border-bottom: 1px solid var(--line); }
+.mp-head > div { flex: 1; min-width: 0; } .mp-t { font-size: 16px; font-weight: 600; line-height: 22px; letter-spacing: -0.01em; } .mp-s { font-size: 12px; color: var(--ink-3); margin-top: 4px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.mp-body { flex: 1; overflow-y: auto; padding: 12px 20px 24px; }
+@media (max-width: 1100px) { .mtg-panel { width: 360px; } }
+@media (max-width: 760px) { .cal { height: auto; } .calwrap { flex-direction: column; } .mtg-panel { width: auto; border-left: 0; border-top: 1px solid var(--line); } .calbody { max-height: 70vh; } }
+.mp-body { display: flex; flex-direction: column; gap: 18px; font-size: 14px; }
+.mp-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.mp-actions .btn { height: 34px; font-size: 13px; text-decoration: none; }
+.mp-actions a.btn:not(.ghost) { color: var(--ink); }
+.mp-sec { display: flex; flex-direction: column; gap: 6px; }
+.mp-k { font-size: 12px; font-weight: 500; color: var(--ink-3); }
+.mp-v { font-size: 14px; line-height: 22px; color: var(--ink); }
+.mp-notes { white-space: normal; overflow-wrap: anywhere; color: var(--ink-2); }
+.mp-notes.clamp { display: -webkit-box; -webkit-line-clamp: 8; -webkit-box-orient: vertical; overflow: hidden; }
+.mp-files { display: flex; flex-direction: column; gap: 4px; } .mp-files a { display: inline-flex; gap: 8px; align-items: center; }
+.mp-people { display: flex; flex-wrap: wrap; gap: 6px; }
+.person { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 8px; border: 1px solid var(--line-strong); border-radius: 999px; font-size: 13px; }
+.person.out { color: var(--ink-3); text-decoration: line-through; }
+.rd { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-4); } .rd.ok { background: var(--ok); } .rd.bad { background: var(--bad); } .rd.warn { background: var(--warn); }
+.mp-t { font-size: 18px; line-height: 24px; } .mp-s { font-size: 13px; }
+.mtg-panel { width: clamp(480px, 40vw, 720px) !important; }
+.mp-actions { gap: 10px; align-items: center; }
+.mp-actions .btn { height: 36px; padding: 0 14px; font-size: 13px; line-height: 1; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; vertical-align: middle; }
+.mp-actions .btn:not(.primary) { background: var(--raised); border: 1px solid var(--line-strong); color: var(--ink); }
+.mp-actions .btn:not(.primary):hover { border-color: var(--line-hover); background: var(--raised-2); }
+.mp-notes.clamp { -webkit-line-clamp: 10; }
+.mp-notes .rich, .mp-notes .plain { color: var(--ink-2); } .mp-notes .plain { white-space: pre-wrap; }
+.mp-notes ol, .mp-notes ul { margin: 4px 0 8px; padding-left: 22px; } .mp-notes li { margin: 2px 0; }
+.mp-notes b, .mp-notes strong { color: var(--ink); font-weight: 600; }
+.mp-notes p { margin: 0 0 8px; } .mp-notes .ih { color: var(--ink); font-weight: 600; margin: 10px 0 2px; } .mp-notes .ih:first-child { margin-top: 0; }
+.hood.agenda { border-top: 1px solid var(--line); padding-top: 12px; }
+.hood.agenda summary { font-size: 13px; color: var(--ink-2); }
+/* Shortcuts live in the hover tooltip, never inline on buttons (owner feedback, Nov 13). Palette and menu rows keep theirs. */
+.btn kbd, .sendbtn kbd, .fpill kbd { display: none !important; }
+/* Connectors page */
+.page.conn { max-width: 860px; gap: 18px; }
+.cmine { display: flex; flex-direction: column; gap: 8px; }
+.cchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.cchip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 8px; border: 1px solid var(--line-strong); border-radius: 999px; font-size: 13px; }
+.cbar { display: flex; gap: 8px; align-items: center; } .cbar input { flex: 1; }
+.clist { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.crow { display: flex; align-items: center; gap: 12px; padding: 10px 4px; border-bottom: 1px solid var(--line-soft); }
+.crow:hover { background: var(--hover); }
+.clogo { width: 32px; height: 32px; flex: none; border-radius: 8px; background: var(--raised-2); color: var(--ink); display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; }
+.crow.on .clogo { background: var(--accent-bg); color: var(--accent-ink); }
+.cmain { flex: 1; min-width: 0; } .cname { font-size: 14px; font-weight: 500; display: flex; gap: 8px; align-items: baseline; }
+.ccat { font-size: 12px; color: var(--ink-3); font-weight: 400; } .cabout { font-size: 13px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cstate { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-2); min-width: 110px; }
+.cact { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; min-width: 120px; justify-content: flex-end; } .cact.ok { color: var(--ok); }
+.rd.mute { background: var(--ink-4); }
+@media (prefers-reduced-motion: reduce) { #drawer { transition: none; } }
+</style>
+</head>
+<body>
+<div class="shell" id="shell"><aside id="rail"></aside><section id="list"></section><main id="detail"></main></div>
+<aside id="drawer" aria-label="Chat"></aside>
+<div class="menu" id="menu"></div>
+<div class="overlay" id="pal"><div class="palette"><input id="pal-in" placeholder="Type a command or search items" autocomplete="off"><div class="plist" id="pal-list"></div></div></div>
+<div class="overlay" id="ask"><div class="dialog"><div class="h" id="ask-title"></div><div class="soft" id="ask-sub"></div><div id="ask-field"></div>
+  <div class="actions"><button class="btn ghost" data-ask="cancel">Cancel <kbd>esc</kbd></button><button class="btn primary" data-ask="ok">Save <kbd>⌘↵</kbd></button></div></div></div>
+<div class="overlay" id="fbx"><div class="dialog"><div class="h">Feedback on this work</div>
+  <div class="soft">Goes to the job that did it. The nightly learning run turns it into rules.</div>
+  <div class="bar"><button class="iconbtn rate up" data-fbx-rate="up" title="Good">${""}</button><button class="iconbtn rate down" data-fbx-rate="down" title="Not good"></button></div>
+  <div class="chips" id="fbx-tags"></div>
+  <textarea id="fbx-note" rows="3" placeholder="What should it have done? e.g. looked only at one source; most of the activity is elsewhere"></textarea>
+  <div class="actions"><button class="btn ghost" data-fbx="cancel">Cancel <kbd>esc</kbd></button><button class="btn primary" data-fbx="ok">Save <kbd>⌘↵</kbd></button></div></div></div>
+<div class="overlay" id="report"><div class="dialog report"><div class="rtop"><span class="h" id="report-title">Agent report</span><span class="grow"></span><button class="btn ghost sm" data-close-report>Close <kbd>esc</kbd></button></div><div class="md" id="report-body"></div></div></div>
+<div id="toast"></div>
+<script>
+const CFG = /*BRAIN_CONFIG*/{};  // config/brain.json (public fields), filled in by app/server.py
+const OWNER = CFG.owner_token || "me";
+// Every /api call carries this launch's token (app/server.py refuses calls without it).
+const _fetch = window.fetch.bind(window);
+window.fetch = (u, o = {}) => typeof u === "string" && u.startsWith("/api/") ? _fetch(u, { ...o, headers: { ...(o.headers || {}), "X-Brain-Token": CFG.token } }) : _fetch(u, o);
+document.title = CFG.brain_name || "Second Brain";
+
+/* ---------- constants ---------- */
+/* Category tag on every item: what it is to the owner at a glance. Derived from type and the current step; an item's own
+   `category` wins. Refine labels here (and in queue/SCHEMA.md) as the owner asks. */
+const CATS = { action: ["Action item", "info"], decision: ["Decision", "warn"], reply: ["Reply", "info"], review: ["Review", "warn"],
+  followup: ["Follow-up", "mute"], learning: ["Learning", "ok"], check: ["Code check", "ok"], idea: ["Idea", "mute"], meeting: ["Meeting", "info"] };
+function category(i) {
+  if (i.category && CATS[i.category]) return i.category;
+  if (i.type === "brain_rule") return "learning";
+  if (i.type === "idea") return /^add check\b/i.test(i.title || "") ? "check" : "idea";
+  if (i.type === "meeting") return "meeting";
+  if (i.type === "review") return "review";
+  const s = curStep(i);
+  if (s && !isOwner(s.owner) && !isAgent(s.owner)) return "followup";
+  return { decide: "decision", approve_send: "reply" }[i.type] || "action";
+}
+function catTag(i) { const [l, k] = CATS[category(i)]; return `<span class="tag cat ${k}">${l}</span>`; }
+const VERB = { queue_update: "Apply updates", none: "Mark done", slack_send: "Send", slack_draft: "Save Slack draft", pr_merge: "Merge PR", pr_comment: "Post comment", pr_approve: "Approve PR", pr_request_changes: "Request changes", ledger_pr: "Add to ledger PR", brain_edit: "Add to brain", gdoc_create: "Create Google Doc", gsheet_write: "Write to sheet", calendar_event: "Send invite", email_draft: "Save email draft" };
+const WHERE = { none: "", slack_send: "Sends in Slack", slack_draft: "Saves a Slack draft", pr_merge: "Merges the PR", pr_comment: "Comments on the PR", pr_approve: "Approves the PR on GitHub", pr_request_changes: "Requests changes on GitHub", ledger_pr: "Adds to your open rulings PR", brain_edit: "Adds a brain rule", gdoc_create: "Creates a Google Doc", gsheet_write: "Writes to a Google Sheet", calendar_event: "Sends a calendar invite", email_draft: "Saves a Gmail draft" };
+function consequence(s) {
+  const k = s.execute?.kind || "none", where = s.execute?.target_label || "";
+  return {
+    none: "Marks this step done.",
+    slack_send: `Posts ${where ? "to " + where + " " : ""}right away.`,
+    slack_draft: "Saves a Slack draft. Nothing is sent.",
+    gdoc_create: "Creates the doc and links it here. Nothing is sent.",
+    gsheet_write: "Writes to the sheet. Nothing is sent.",
+    calendar_event: `Sends the invite${s.execute?.attendees ? " to " + [].concat(s.execute.attendees).join(", ") : ""}.`,
+    email_draft: "Saves a Gmail draft. Nothing is sent.",
+    ledger_pr: "Adds it to your open rulings PR. Nothing is merged.",
+    pr_merge: "Merges the PR.",
+    pr_comment: "Posts a comment on the PR.",
+    pr_approve: "Approves the PR on GitHub with this comment. Nothing is merged.",
+    pr_request_changes: "Posts this as a change request on the PR.",
+    brain_edit: "Adds the rule to your brain.",
+  }[k] || "";
+}
+// Module pages show only when config/brain.json enables them (modules.meetings, modules.architect).
+const VIEWS_ALL = [["queue", "Needs me", "inbox"], ["progress", "In progress", "loader"], ["waiting", "Waiting", "hourglass"], ["done", "Done", "check"], ["meetings", "Meetings", "calendar"], ["learn", "Learn", "book"], ["architect", "Solution Architect", "compass"], ["synopsis", "Synopsis", "file"], ["stats", "Performance", "chart"], ["connectors", "Connectors", "plug"]];
+const VIEWS = VIEWS_ALL.filter(([k]) => !["meetings", "architect"].includes(k) || (k === "meetings" ? CFG.modules?.meetings : CFG.modules?.architect));
+const LISTS = ["queue", "progress", "waiting", "done"];
+const VIEW_OF = { open: "queue", working: "progress", reconciling: "progress", waiting: "waiting", snoozed: "waiting", done: "done", dismissed: "done", delegated: "done", stale: "done" };
+const STATUS = { open: ["", "Needs me"], working: ["warn", "In progress"], reconciling: ["info", "Reconciling"], waiting: ["", "Waiting"], snoozed: ["warn", "Snoozed"], done: ["ok", "Done"], dismissed: ["bad", "Dismissed"], delegated: ["info", "Delegated"], stale: ["", "Stale"] };
+const PENDING = ["todo", "queued", "failed"];
+/* Lucide paths: one set, one stroke. */
+const ICON = {
+  plug: '<path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/>',
+  video: '<path d="m16 13 5.22 3.48a.5.5 0 0 0 .78-.42V7.94a.5.5 0 0 0-.76-.43L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>',
+  left: '<path d="m15 18-6-6 6-6"/>', right: '<path d="m9 18 6-6-6-6"/>',
+  inbox: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+  loader: '<path d="M21 12a9 9 0 1 1-6.22-8.56"/>', hourglass: '<path d="M5 22h14M5 2h14M17 22v-4.17a2 2 0 0 0-.59-1.42L12 12l-4.41 4.41A2 2 0 0 0 7 17.83V22M7 2v4.17a2 2 0 0 0 .59 1.42L12 12l4.41-4.41A2 2 0 0 0 17 6.17V2"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>', file: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5M16 13H8M16 17H8M10 9H8"/>',
+  chart: '<path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>', search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  send: '<path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/>', more: '<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
+  pen: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/>', bot: '<path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/>',
+  out: '<path d="M7 17 17 7M7 7h10v10"/>', skip: '<path d="m5 4 10 8-10 8z"/><path d="M19 5v14"/>', clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+  user: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/>', ban: '<circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/>',
+  undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>', sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
+  play: '<polygon points="6 3 20 12 6 21 6 3"/>', bulb: '<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5M9 18h6M10 22h4"/>',
+  feather: '<path d="M12.67 19a2 2 0 0 0 1.42-.59l6.31-6.31a6 6 0 0 0-8.49-8.49l-6.32 6.32A2 2 0 0 0 5 11.33V19h7.67zM16 8 2 22M17.5 15H9"/>',
+  up: '<path d="M7 10v12M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>',
+  down: '<path d="M17 14V2M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/>',
+  copy: '<rect x="8" y="8" width="14" height="14" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>', compass: '<circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-2.12 6.36-6.36 2.12 2.12-6.36z"/>', book: '<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>', bookmark: '<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>',
+  calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  layers: '<path d="m12 2 10 5-10 5L2 7z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/>', chat: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/>', x: '<path d="M18 6 6 18M6 6l12 12"/>',
+};
+const icon = n => `<svg class="i" viewBox="0 0 24 24">${ICON[n] || ""}</svg>`;
+
+/* ---------- state ---------- */
+const store = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } };
+const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+const state = { items: [], leads: [], executor: false, revising: [], agents: [], chatting: [], today: 0, view: "queue", area: "all" /* fixed: the Areas filter was removed */, type: "all", sel: 0, synDate: null,
+  expanded: store("jb-expanded", false), mode: "ask", chat: false, seen: store("jb-seen", {}) };
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const safeUrl = u => /^(https?:\/\/|\/(?!\/))/i.test(String(u ?? "").trim()) ? esc(String(u).trim()) : "#";  // links from runs: web or app paths only
+const isText = () => ["TEXTAREA", "INPUT"].includes(document.activeElement?.tagName);
+const isOwner = o => (CFG.owner_names || [OWNER, "me"]).includes((o || OWNER).trim().toLowerCase());
+const isAgent = o => (o || "").trim().toLowerCase() === "agent";
+const revising = s => !!s.revise_requested && s.revise_requested > (s.revised_at || "");
+document.documentElement.dataset.theme = store("jb-theme", "dark");
+
+/* ---------- helpers ---------- */
+function toast(html, bad = false) { const t = $("toast"); t.className = bad ? "bad" : ""; t.innerHTML = html; void t.offsetWidth; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2200); }
+function etNow() { return new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" })); }
+function daysUntil(d) { if (!d) return null; const n = etNow(); n.setHours(0, 0, 0, 0); return Math.round((new Date(d + "T00:00:00") - n) / 86400000); }
+function fmtDate(d) { return new Date(d + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }); }
+function fmtTs(ts) { if (!ts) return ""; return new Date(ts).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); }
+function dueTag(d) {
+  const n = daysUntil(d); if (n === null || isNaN(n)) return "";
+  const l = n < 0 ? `${-n}d overdue` : n === 0 ? "Due today" : n === 1 ? "Due tomorrow" : `Due ${fmtDate(d)}`;
+  return `<span class="tag ${n < 0 ? "bad" : n === 0 ? "warn fill" : n <= 2 ? "warn" : ""}">${l}</span>`;
+}
+// Stale (server-computed, bin/stale.py): past its target date, or 3 days with no movement. Past-target items already show dueTag.
+function staleTag(i) { const st = i.stale; if (!st || i.due) return ""; return `<span class="tag ${st.kind === "mine" ? "bad" : "warn"}" title="Became current ${esc(fmtTs(st.since))}">${esc(st.label)}</span>`; }
+function firstSentence(s, max = 220) {
+  if (!s) return ""; const m = String(s).match(/^[\s\S]*?[.!?](?=\s|$)/); const o = (m ? m[0] : String(s)).trim();
+  return o.length > max ? o.slice(0, max).replace(/\s+\S*$/, "") + "…" : o;
+}
+const AVC = ["#c2410c", "#0e7490", "#7c3aed", "#be185d", "#15803d", "#a16207", "#1d4ed8", "#9f1239"];
+function avatar(owner) {
+  if (isOwner(owner)) return `<span class="av me" title="You">${esc(CFG.owner_initials || "ME")}</span>`;
+  if (isAgent(owner)) return `<span class="av bot" title="Agent">${icon("bot")}</span>`;
+  const name = String(owner || "?"); let h = 0; for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const ini = name.split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
+  return `<span class="av" style="background:${AVC[h % AVC.length]}" title="${esc(name)}">${esc(ini)}</span>`;
+}
+function steps(i) { return (i.steps && i.steps.length) ? i.steps : [{ id: "s1", text: i.title, owner: OWNER, status: "todo", draft: i.draft || "", execute: i.execute || { kind: "none" } }]; }
+const curStep = i => steps(i).find(s => PENDING.includes(s.status || "todo"));
+function progressLabel(i) {
+  const cs = curStep(i);
+  if ((i.redraft_requested || "") > (i.redrafted_at || "")) return "Redrafting";
+  if (cs && revising(cs)) return "Revising";
+  if (cs && isAgent(cs.owner)) return "Agent working";
+  if (cs && cs.status === "queued") return VERB[cs.execute?.kind] === "Send" ? "Sending" : "Running";
+  return i.status === "reconciling" ? "Reconciling" : "In progress";
+}
+function statusTag(i) { let [k, l] = STATUS[i.status] || ["", i.status]; if (i.status === "working") l = progressLabel(i); return `<span class="tag ${k}">${esc(l)}</span>`; }
+const lastAgentTs = i => (i.chat || []).filter(m => m.role !== OWNER).map(m => m.ts || "").sort().pop() || "";
+const unread = i => { const t = lastAgentTs(i); return !!t && t > (state.seen[i.id] || ""); };
+function markSeen(i) { const t = lastAgentTs(i); if (t && state.seen[i.id] !== t) { state.seen[i.id] = t; save("jb-seen", state.seen); } }
+
+/* ---------- data ---------- */
+async function load(force) {
+  if (load.busy) return; load.busy = true;
+  try {
+    const r = await fetch("/api/items", { headers: !force && load.tag ? { "If-None-Match": load.tag } : {} });
+    if (r.status === 304) return;  // nothing changed since the last poll: no parse, no re-render
+    load.tag = r.headers.get("ETag");
+    var fresh = (await r.json()).filter(i => i.type !== "meeting");  // meetings live on the Meetings page only
+  } finally { load.busy = false; }
+  const keep = current()?.id;
+  state.items = fresh;
+  const idx = visible().findIndex(i => i.id === keep);
+  if (idx >= 0) state.sel = idx;
+  if (!isText() && !$("menu").classList.contains("show")) render(); else { renderRail(); renderDrawer(); }
+}
+async function loadMeta() {
+  const r = await (await fetch("/api/leads")).json();
+  Object.assign(state, { leads: r.leads, executor: r.executor_running, revising: r.revising || [], agents: r.agents || [], chatting: r.chatting || [] });
+  renderRail();
+}
+const inView = i => (VIEW_OF[i.status] || "queue") === state.view;
+function visible() {
+  return state.items.filter(inView).filter(i => state.area === "all" || i.area === state.area).filter(i => state.type === "all" || category(i) === state.type)
+    .sort(state.view === "done" ? (a, b) => (b.updated || "").localeCompare(a.updated || "") : (a, b) => (b.priority ?? 0) - (a.priority ?? 0) || (a.due || "9").localeCompare(b.due || "9"));
+}
+const current = () => visible()[state.sel];
+const areas = () => [...new Set(state.items.map(i => i.area))].sort();
+const count = v => state.items.filter(i => (VIEW_OF[i.status] || "queue") === v && (state.area === "all" || i.area === state.area)).length;
+
+/* ---------- render ---------- */
+function render() {
+  renderRail();
+  $("shell").classList.toggle("wide", !LISTS.includes(state.view));  // an empty list keeps its column and shows its empty state there
+  $("shell").classList.remove("slim");  // the list keeps one width however many items it holds (it used to narrow at 3 or fewer)
+  const leave = () => state.chat && state.mode === "talk" ? renderDrawer() : setChat(false);  // an agent conversation stays open across pages
+  if (state.view === "synopsis") { renderSynopsis(state.synDate); return leave(); }
+  if (state.view === "stats") { renderStats(); return leave(); }
+  if (state.view === "connectors") { renderConnectors(); return leave(); }
+  if (state.view === "learn") { if (!$("lmsgs")) renderLearn(); return leave(); }
+  if (state.view === "architect") { if (!$("arch-page")) renderArchitect(); return leave(); }
+  if (state.view === "meetings") { renderMeetings(); return leave(); }
+  renderList(); renderDetail(); renderDrawer();
+}
+
+function renderRail() {
+  const busy = [state.leads.some(l => l.running) && "Lead running", state.agents.length && `${state.agents.length} agent${state.agents.length === 1 ? "" : "s"} working`,
+    state.chatting.length && "Answering", state.revising.length && "Revising", state.executor && "Sending"].filter(Boolean);
+  const last = state.leads.map(l => l.last_run).filter(Boolean).sort().pop();
+  const nav = keys => VIEWS.filter(v => keys.includes(v[0])).map(([k, l, ic]) => `<button class="nav ${state.view === k ? "on" : ""}" data-view="${k}">${icon(ic)}<span class="lbl">${l}</span><span class="n ${k === "queue" && count("queue") ? "hot" : ""}">${LISTS.includes(k) ? count(k) || "" : ""}</span></button>`).join("");
+  $("rail").innerHTML = `
+    <div class="wordmark">${esc(CFG.brain_name || "Second Brain")} <button class="iconbtn" data-theme-toggle title="Light or dark">${icon("sun")}</button></div>
+    <button class="cmdk" data-palette>${icon("search")}<span>Search</span><kbd>⌘K</kbd></button>
+    <div class="group">${nav(LISTS)}</div>
+    <div class="group">${nav(["meetings", "learn", "architect"])}</div>
+    <div class="group"><div class="glabel">Reports</div>${nav(["synopsis", "stats"])}</div>
+    <div class="group"><div class="glabel">Setup</div>${nav(["connectors"])}</div>
+    <div class="foot">
+      <div class="status"><span class="dot ${busy.length ? "live" : ""}"></span>${busy.length ? esc(busy.join(" · ")) : `All quiet${last ? " · checked " + esc(fmtTs(last).split(", ").pop()) : ""}`}</div>
+      ${(() => { const h = etNow().getHours(), stale = state.leads.filter(l => !l.running && l.last_run && (Date.now() - new Date(l.last_run)) > 150 * 60000); return h >= 9 && h <= 22 && stale.length ? `<div style="font-size:12px;color:var(--bad)">${stale.map(l => `${esc(l.area)} last checked ${fmtTs(l.last_run)}`).join("; ")}. Press g to run now.</div>` : ""; })()}
+    </div>`;
+}
+
+// Internal ledger IDs (D12, G4) mean nothing at a glance (style S11); they stay in Details.
+const plain = t => (t || "").replace(/\s*\((?:[DGA]\d{1,4})(?:[,/ ]+[DGA]?\d{1,4})*\)/g, "").replace(/\b(?:[DGA]\d{2,4})\b,?\s*/g, m => /\d/.test(m) ? "" : m).replace(/\s{2,}/g, " ").trim();
+function rowNext(i) {
+  const cs = curStep(i); if (state.view === "done" || !cs) return "";
+  if (cs.status === "failed") return `${isAgent(cs.owner) ? "Agent blocked" : "Failed"}: ${esc(cs.text)}`;
+  if (isOwner(cs.owner)) return esc(plain(cs.text));
+  const first = (cs.owner || "").split(" ")[0].toLowerCase();
+  if (!isAgent(cs.owner) && first && cs.text.toLowerCase().startsWith(first)) return esc(plain(cs.text));
+  return `${isAgent(cs.owner) ? "Agent" : esc(cs.owner)}: ${esc(plain(cs.text))}`;
+}
+const EMPTY = { queue: ["All clear", "Nothing needs you right now."], progress: ["Nothing running", "Running work shows here."], waiting: ["No one owes you anything", "What others owe you shows here."], done: ["Nothing done yet", "Cleared items land here."] };
+function renderList() {
+  const items = visible();
+  if (state.sel >= items.length) state.sel = Math.max(0, items.length - 1);
+  const types = ["all", ...Object.keys(CATS).filter(t => state.items.some(i => inView(i) && category(i) === t && (state.area === "all" || i.area === state.area)))];
+  const empty = EMPTY[state.view];
+  const keep = $("rows")?.scrollTop || 0, selId = items[state.sel]?.id, moved = selId !== renderList.selId;
+  renderList.selId = selId;
+  $("list").innerHTML = `
+    <div class="lhead"><div class="t">${VIEWS.find(v => v[0] === state.view)[1]}<span class="c">${items.length || ""}</span>
+        ${state.type !== "all" && CATS[state.type] ? `<button class="fpill" data-type="all" title="Clear filter">${esc(CATS[state.type][0])}${icon("x")}</button>` : ""}
+        <span class="grow"></span>${types.length > 2 && state.view !== "done" ? `<button class="iconbtn" data-menu="filter" title="Filter by category">${icon("more")}</button>` : ""}</div></div>
+    <div id="rows">${items.length ? items.map((i, n) => {
+      const p = i.priority ?? 0, ss = steps(i), cs = curStep(i);
+      return `<div class="row ${n === state.sel ? "sel" : ""} ${p >= 75 ? "p-hot" : ""}" data-n="${n}" data-id="${esc(i.id)}">
+        ${unread(i) ? '<span class="unread" title="New reply"></span>' : ""}
+        <div class="title">${esc(plain(i.title))}</div>
+        ${rowNext(i) && !sameText(rowNext(i), i.title) ? `<div class="next">${rowNext(i)}</div>` : ""}
+        <div class="meta">${state.type === "all" ? catTag(i) : ""}<span class="grow"></span>
+          ${["progress"].includes(state.view) || (state.view === "waiting" && i.status === "snoozed") || (state.view === "done" && i.status !== "done") ? statusTag(i) : ""}${state.view !== "done" ? dueTag(i.due) + staleTag(i) : ""}</div>
+      </div>`; }).join("")
+      : `<div class="empty">${state.view === "queue" ? `<div class="big">${icon("check")}</div>` : ""}<div class="h">${empty[0]}</div><div>${empty[1]}</div>
+         ${state.view === "queue" && (count("progress") + count("waiting")) ? `<div class="muted" style="font-size:13px">${count("progress")} in progress · ${count("waiting")} waiting on others</div>` : ""}</div>`}</div>`;
+  $("rows").scrollTop = keep;  // the 8s refresh rebuilds the list; keep the owner's place
+  if (moved) document.querySelector(".row.sel")?.scrollIntoView({ block: "nearest" });
+}
+
+function currentCard(i, s, why) {
+  if (!s) return `<div class="card"><div class="cbody"><div class="soft">Every step is resolved.</div></div></div>`;
+  const mine = isOwner(s.owner), agent = isAgent(s.owner), st = s.status || "todo", kind = s.execute?.kind || "none";
+  const blocked = agent && st === "failed", busy = st === "queued" || (agent && st === "todo") || revising(s);
+  let line = "", lineBad = false;
+  if (st === "failed") { line = (agent ? "Agent stopped: " : "Didn't run, nothing was sent: ") + (s.error_short || firstSentence(s.error || "see Details")); lineBad = true; }
+  else if (revising(s)) line = "Revising: " + firstSentence(s.revisions?.at(-1)?.note);
+  else if (st === "queued") line = `${VERB[kind]}: running now`;
+  else if (agent) line = "Agent working. Report lands here.";
+  else if (!mine) line = `Waiting on ${s.owner}.`;
+  const isRep = e => (e.url || "").startsWith("/report/");
+  const rep = (s.evidence || []).find(isRep) || (i.type === "meeting" ? steps(i).slice(0, steps(i).indexOf(s)).flatMap(x => x.evidence || []).filter(isRep).pop() : null);
+  const hasDraft = mine && kind !== "none";  // a none step is the owner doing it himself (a call, a review): no message box
+  const point = mine && kind === "none" && s.draft ? s.draft.trim().replace(/^talking point:\s*/i, "") : "";
+  const to = s.execute?.target_label && kind !== "none" ? `<span class="to">${esc(s.execute.target_label)}</span>${s.new_recipient ? ` <span class="chip warn">New recipient</span>` : ""}` : "";
+  const primary = mine ? `<button class="btn primary" data-step-act="do_step" ${busy ? "disabled" : ""} title="${esc(consequence(s) + (s.execute?.target ? " Goes to: " + s.execute.target : ""))}">${icon(kind === "none" ? "check" : "send")}${esc(VERB[kind] || "Done")}${to ? " to" : ""} ${to} <kbd>a</kbd></button>`
+    : blocked ? `<button class="btn primary" data-step-act="take_back">${icon("user")}Take it myself <kbd>t</kbd></button>` : "";
+  return `<div class="card cur">
+    <div class="chead">${avatar(s.owner)}<span class="k">Step ${steps(i).indexOf(s) + 1} of ${steps(i).length} · ${mine ? "Yours" : agent ? "Agent" : esc(s.owner)}</span><span class="grow"></span>${voteBtns(i, s)}${rep ? `<a href="#" data-report="${esc(rep.url.slice(8))}" style="font-size:13px">Report</a>` : ""}</div>
+    <div class="stitle">${esc(s.text)}</div>
+    ${line ? `<div class="sline ${lineBad ? "bad" : ""}">${esc(line)}</div>` : ""}
+    ${checkLines(i, s)}
+    <div class="cbody">
+      ${why && mine && !hasDraft && !point ? `<div class="why">${icon("bulb")}<span>${esc(why)}</span></div>` : ""}
+      ${point && !s.conflicts?.length ? `<div class="why">${icon("chat")}<span>To raise: ${esc(point)}</span></div>` : ""}
+      ${mine && s.conflicts?.length ? `<ol class="conflicts">${s.conflicts.map(c => `<li><div class="ct">${esc(c.topic)}</div><div><span class="lbl">Your notes</span> ${esc(c.yours)}</div><div><span class="lbl">Meeting notes</span> ${esc(c.notes_say)}${c.notes_url ? ` <a href="${safeUrl(c.notes_url)}" target="_blank" rel="noopener">source</a>` : ""}</div>${c.affects ? `<div class="soft">Changes: ${esc(c.affects)}</div>` : ""}</li>`).join("")}</ol>` : ""}
+      ${hasDraft ? `<textarea class="draft" id="draft" data-step="${esc(s.id)}" spellcheck="true" ${busy ? "disabled" : ""}>${esc(s.draft || "")}</textarea>` : ""}
+      <div class="bar">${busy && !blocked ? "" : primary}${mine && kind === "none" && s.execute?.url ? `<a class="btn ghost keep" href="${safeUrl(s.execute.url)}" target="_blank" rel="noopener">${icon("out")}<span class="lbl">Open ${esc(s.execute.target_label || "link")}</span></a>` : ""}
+        ${mine && !busy ? `<button class="btn ghost" data-step-act="revise_step" title="Revise (v)">${icon("pen")}<span class="lbl">Revise</span> <kbd>v</kbd></button>` : ""}
+        <button class="btn ghost" data-chat-open title="Ask (c)">${icon("chat")}<span class="lbl">Ask</span> <kbd>c</kbd>${unread(i) ? '<span class="badge-dot"></span>' : ""}</button>
+        ${busy && !blocked ? "" : `<button class="btn ghost" data-step-act="agent_step" title="${agent ? "Retry agent" : "Agent"} (h)">${icon("bot")}<span class="lbl">${agent ? "Retry agent" : "Agent"}</span> <kbd>h</kbd></button>`}
+        <span class="grow"></span>
+        ${!mine && !agent && !busy ? `<button class="btn ghost" data-step-act="nudge" title="Nudge (n)">${icon("send")}<span class="lbl">Nudge</span> <kbd>n</kbd></button>` : ""}
+        <button class="iconbtn" data-menu="step" title="More">${icon("more")}</button></div>
+    </div></div>`;
+}
+
+function chatPill(i) {
+  const chat = i.chat || [], notes = (i.notes || []).filter(n => n.action === "note");
+  if (state.chat || (!chat.length && !notes.length && !i.chat_pending)) return "";
+  const last = chat.at(-1);
+  const label = i.chat_pending ? "Agent is checking…" : last ? `${last.role === OWNER ? "You" : "Agent"}: ${last.text}` : `${notes.length} note${notes.length === 1 ? "" : "s"} for the lead`;
+  return `<button class="chatpill" data-chat-open>${icon("chat")}<span class="last">${esc(label)}</span>${unread(i) ? '<span class="tag info">New</span>' : ""}<span class="muted" style="font-size:12px">${chat.length + notes.length}</span></button>`;
+}
+
+// Code checks (bin/checks.py) on this step: block = needs an override to act, warn = shown only.
+const stepChecks = (i, s) => (i.checks || []).filter(c => c.step_id === s?.id);
+function checkLines(i, s) {
+  // A warning is one short line (full text on hover); assumptions are listed under Details, not here.
+  // Assumptions (K6) are the agent's working notes, not something the owner acts on: ask the agent for them.
+  return stepChecks(i, s).filter(c => c.code !== "K6").map(c => {
+    const msg = c.msg;
+    return `<div class="checkline ${c.level} ${c.level === "warn" ? "one" : ""}" title="${esc(c.msg)}">${icon(c.level === "block" ? "ban" : "bulb")}<span>${esc(msg)}</span></div>`;
+  }).join("");
+}
+// Where the item came from, shown on every card: the first Slack link (thread), else the first source of any kind.
+/* Sources in plain words: "Sam Slack DM", "PR #12", "Handoff tracker". The full label is the hover title. */
+// Two lines that say the same thing (a step named like its item) show once.
+function sameText(a, b) { const w = t => new Set(String(t).replace(/<[^>]+>/g, "").toLowerCase().match(/[a-z0-9']+/g) || []); const A = w(a), B = w(b); const common = [...A].filter(x => B.has(x)).length; return common >= Math.min(A.size, B.size) * 0.8; }
+function trunc(t, n) { t = (t || "").trim(); if (t.length <= n) return t; const c = t.slice(0, n); return c.slice(0, Math.max(c.lastIndexOf(" "), n - 8)).replace(/[\s,;:·-]+$/, "") + "…"; }
+function shortSrc(e) {
+  const u = e.url || "", l = (e.label || "").replace(/\d{4}-\d{2}-\d{2}T[\d:.+-]+/g, "").replace(/\b\d{1,2}[-/]\d{1,2}(\s+\d{1,2}:\d{2}\s*(AM|PM)?(\s*ET)?)?/gi, "").replace(/\s+/g, " ").trim();
+  if (u.startsWith("/report/")) return "Agent report";
+  if (/slack\.com/.test(u)) {
+    let m;
+    if ((m = l.match(/^DM(?: with)? ([A-Z][\w.'-]*(?: [A-Z]\.)?)/))) return `${m[1]} Slack DM`;
+    if ((m = l.match(/^Group DM with ([A-Z][\w.'-]*)/))) return `${m[1]} group DM`;
+    if ((m = l.match(/(\w+) group DM/i))) return `${m[1].replace(/^Your$/, "Your")} group DM`;
+    if (/^thread\b/i.test(l)) return "Slack thread";
+    if ((m = l.match(/#[\w-]+/))) return `${m[0]} Slack`;
+    return trunc(l.split(":")[0], 24) + " (Slack)";
+  }
+  let m;
+  if ((m = u.match(/github\.com\/[^/]+\/([^/]+)\/(pull|issues)\/(\d+)/))) return `${m[2] === "pull" ? "PR" : "Issue"} #${m[3]} ${(CFG.repo_aliases || {})[m[1]] || m[1]}`;
+  if ((m = u.match(/linear\.app\/[^/]+\/issue\/([A-Z]+-\d+)/))) return `Linear ${m[1]}`;
+  const head = trunc(l.split(/[:(]/)[0], 28) || "Link";
+  if (/figma\.com/.test(u)) return `Figma: ${head}`;
+  if (/docs\.google\.com\/spreadsheets/.test(u)) return `Sheet: ${head}`;
+  if (/docs\.google|drive\.google/.test(u)) return `Doc: ${head}`;
+  return head;
+}
+// The item's own sources: the message(s) that made it an action item. Step evidence (agent research, reports) stays
+// with its step; the Report link and the agent chat cover it.
+function sources(i) {
+  const seen = new Set();
+  return [...(i.evidence || [])]
+    .filter(e => e && (e.url || e.label) && !seen.has(e.url || e.label) && seen.add(e.url || e.label));
+}
+function srcLink(e, k, all) {
+  const t = all ? srcNames(all)[k] : shortSrc(e), full = esc(e.label || e.url || "");
+  if ((e.url || "").startsWith("/report/")) return `<a href="#" class="src" data-report="${esc(e.url.slice(8))}" title="${full}">${esc(t)}</a>`;
+  return e.url ? `<a class="src" href="${safeUrl(e.url)}" target="_blank" rel="noopener" title="${full}">${esc(t)} ${icon("out")}</a>` : `<span class="src" title="${full}">${esc(t)}</span>`;
+}
+function sourceLine(i) {
+  const ev = sources(i);
+  if (!ev.length) return `<div class="srcline bad">${icon("ban")}No source recorded: check before acting</div>`;
+  return `<div class="srcline">${icon("file")}<span class="muted">${ev.length === 1 ? "Source" : `${ev.length} sources`}</span>${ev.map((e, k) => srcLink(e, k, ev)).join("")}</div>`;
+}
+/* Two sources with the same short name get their date, so they don't read as one. */
+function srcNames(ev) {
+  const names = ev.map(shortSrc), n = {};
+  names.forEach(x => n[x] = (n[x] || 0) + 1);
+  return names.map((x, k) => n[x] > 1 ? `${x} (${((ev[k].label || "").match(/\b(\d{1,2})[-/](\d{1,2})\b/) || []).slice(1).join("/") || k + 1})` : x);
+}
+const PRIO = p => p >= 85 ? "Urgent" : p >= 70 ? "High" : p >= 50 ? "Medium" : "Low";
+function renderDetail() {
+  const i = current();
+  if (!i) { $("detail").innerHTML = ""; return; }  // the list column shows the empty state; saying it twice is noise
+  const ss = steps(i), cs = curStep(i), full = state.expanded;
+  const rec = ((full ? i.recommendation : (i.recommendation_short || firstSentence(i.recommendation))) || "").replace(/\s*\((?:step )?s\d+\)/g, "");  // step ids never reach the owner (S11)
+  const why = rec || "";
+  const keep = renderDetail.id === i.id ? $("detail").scrollTop : 0;
+  renderDetail.id = i.id;
+  $("detail").innerHTML = `<div class="focus">
+    <div class="topbar">${catTag(i)}${i.status !== "open" ? statusTag(i) : ""}${dueTag(i.due)}${staleTag(i)}<span class="grow"></span>
+      <button class="btn ghost sm" data-expand>${icon("layers")}${full ? "Less" : "Details"} <kbd>m</kbd></button>
+      <button class="iconbtn" data-menu="item" title="Item actions">${icon("more")}</button></div>
+    <div><h1 class="ttl">${esc(plain(i.title))}</h1><div class="ctx">${esc(firstSentence(i.context || i.summary || "", 200))}</div>${sourceLine(i)}</div>
+    ${currentCard(i, cs, why)}
+    ${chatPill(i)}
+    ${(() => {
+      const open = ss.filter(s => s !== cs && PENDING.includes(s.status || "todo")), done = ss.filter(s => s !== cs && !PENDING.includes(s.status || "todo"));
+      if (!open.length && !done.length) return "";
+      const row = (s, d) => `<div class="up ${d ? "done" : ""}"><span class="check ${d ? "done" : ""}">${d ? icon("check") : ""}</span><span class="grow">${esc(s.text)}</span>${avatar(s.owner)}</div>`;
+      return `<div class="card"><div class="chead"><span class="k">${open.length ? "Next" : "Steps"}</span></div><div class="upcoming">
+        ${open.map(s => row(s, false)).join("")}
+        ${done.length ? `<button class="donebtn" data-show-done>${icon("check")}${done.length} done${state.showDone ? " · hide" : ""}</button>${state.showDone ? done.map(s => row(s, true)).join("") : ""}` : ""}
+      </div></div>`;
+    })()}
+    ${full ? details(i, cs) : ""}
+  </div>`;
+  fitDraft();
+  $("detail").scrollTop = keep;
+}
+function fitDraft() { const d = $("draft"); if (!d) return; d.style.height = "auto"; d.style.height = d.scrollHeight + 2 + "px"; }
+document.addEventListener("input", e => { if (e.target.id === "draft") fitDraft(); });
+
+function details(i, cs) {
+  const rows = [
+    i.why_owner ? ["Why it's yours", esc(i.why_owner)] : null,
+    ["Priority", i.priority == null ? "Not set" : PRIO(i.priority)],
+    i.delegated_to ? ["Delegated to", esc(i.delegated_to)] : null,
+    i.snooze_until && i.status === "snoozed" ? ["Snoozed until", esc(fmtTs(i.snooze_until))] : null,
+    (i.feedback || []).length ? ["Your feedback", (i.feedback || []).map(f => `${f.rating === "up" ? "👍" : f.rating === "down" ? "👎" : ""} ${esc((f.tags || []).join(", "))}${f.note ? " · " + esc(f.note) : ""}`).join("\n")] : null,
+  ].filter(Boolean);
+  return `<div class="details">${rows.map(([k, v]) => `<div class="row2"><span>${k}</span><span class="v">${v}</span></div>`).join("")}</div>`;
+}
+
+/* ---------- chat drawer ---------- */
+function setChat(open) {
+  state.chat = open; document.body.classList.toggle("chat-open", open);
+  document.body.classList.toggle("talk-wide", open);  // one width for Ask, Note and Agent
+  if (!open || state.mode !== "talk") { const d = $("drawer"); if (d) { delete d.dataset.sig; delete d.dataset.talkFor; } }
+  if (open) { const i = current(); if (i) markSeen(i); }
+  renderDrawer();
+  if (LISTS.includes(state.view)) { renderDetail(); renderList(); }
+}
+function talkItem() { return (state.talkItem && state.items.find(x => x.id === state.talkItem)) || current(); }
+function renderDrawer() {
+  const d = $("drawer"), i = state.mode === "talk" ? talkItem() : current();
+  if (!state.chat || !i) return;
+  markSeen(i);
+  if (state.mode === "talk") return renderTalk(d, i);
+  const keep = $("compose")?.value || "", hadFocus = document.activeElement?.id === "compose";
+  const entries = [
+    ...(i.chat || []).map((m, n) => ({ ts: m.ts || "", kind: "chat", m, n })),
+    ...(i.notes || []).filter(n => n.action === "note").map(m => ({ ts: m.ts || "", kind: "note", m })),
+  ].sort((a, b) => a.ts.localeCompare(b.ts) || (a.n ?? 0) - (b.n ?? 0));
+  const ask = state.mode === "ask";
+  d.innerHTML = `
+    ${drawerHead(i.title)}
+    <div class="dbd" id="dbd">
+      ${entries.length ? entries.map(x => {
+        if (x.kind === "note") return `<div class="note"><div class="who">Note for the lead · ${esc(fmtTs(x.m.ts))}${x.m.redraft ? " · redraft asked" : ""}</div><div class="text">${esc(x.m.text)}</div></div>`;
+        const m = x.m, me = m.role === OWNER;
+        return `<div class="msg ${me ? "me" : ""}">${avatar(me ? OWNER : "agent")}<div class="bubble"><div class="who">${me ? "You" : "Agent"} · ${esc(fmtTs(m.ts))}</div><div class="text">${esc(m.text)}</div>${m.proposed_draft ? `<div class="pd">${esc(m.proposed_draft)}</div><div class="pact">${m.applied_at ? '<span class="tag ok">Applied to draft</span>' : `<button class="btn line sm" data-apply="${x.n}" data-step="${esc(m.step_id || "")}">${icon("check")}Use this draft</button>`}</div>` : ""}</div></div>`;
+      }).join("") : `<div class="dempty">Ask about the draft, or switch to Note to brief the lead.</div>`}
+      ${i.chat_pending ? `<div class="thinking">${avatar("agent")}<span class="dots"><i></i><i></i><i></i></span>Checking</div>` : ""}
+    </div>
+    ${composer(ask ? "Ask about this item" : "Context for the lead", ask ? "Ask (Enter)" : "Save (Enter) · save and redraft (⌘Enter)")}`;
+  const box = $("compose"); box.value = keep; if (hadFocus) box.focus();
+  const b = $("dbd"); b.scrollTop = b.scrollHeight;
+}
+
+/* Drawer chrome shared by Ask, Note and Agent: tabs on top, one clean composer at the bottom. */
+function drawerHead(sub, extra = "") {
+  const m = state.mode;
+  return `<div class="dhd"><div class="dtabs"><button class="${m === "ask" ? "on" : ""}" data-mode="ask" title="Ask about this item (c)">Ask</button><button class="${m === "note" ? "on" : ""}" data-mode="note" title="Brief the lead (i)">Note</button><button class="${m === "talk" ? "on" : ""}" data-mode="talk" title="Talk to the agent (h)">Agent</button></div>
+    <span class="grow"></span>${extra}<button class="iconbtn" data-chat-close title="Close (Esc)">${icon("x")}</button></div>
+    <div class="dsub">${esc(sub)}</div>`;
+}
+function composer(placeholder, sendTitle, label = "") {
+  return `<div class="dft"><div class="composer"><textarea id="compose" rows="1" placeholder="${esc(placeholder)}"></textarea>
+    <button class="sendbtn ${label ? "wide" : ""}" data-compose title="${esc(sendTitle)}">${icon("send")}${label ? `<span>${esc(label)}</span>` : ""}</button></div></div>`;
+}
+/* ---------- talk: the owner and a step's research agent ---------- */
+// The step the agent panel talks about: the current step, unless an earlier one has the agent's work.
+function talkStep(i) {
+  const c = curStep(i);
+  if (c && (c.agent || isAgent(c.owner))) return c;
+  return [...steps(i)].reverse().find(s => s.agent) || c || steps(i).at(-1);
+}
+async function loadTalk() {
+  const i = talkItem(), s = i && talkStep(i); if (!s) return;
+  const r = await fetch(`/api/talk/${encodeURIComponent(i.id)}/${encodeURIComponent(s.id)}`).catch(() => null);
+  if (!r?.ok) return;
+  const data = await r.json(), prev = state.talk && state.talk.id === i.id && state.talk.step === s.id ? state.talk : null;
+  const optimistic = (prev?.optimistic || []).filter(o => !data.messages.some(m => m.text === o.text));
+  state.talk = { id: i.id, step: s.id, ...data, optimistic, waiting: optimistic.length > 0 };
+  if (state.chat && state.mode === "talk") renderDrawer();
+}
+function openTalk() {
+  const i = current(); if (!i || !LISTS.includes(state.view)) return;
+  state.talkItem = i.id;  // the conversation stays on this item while the owner works elsewhere
+  state.mode = "talk"; state.talk = null; setChat(true); loadTalk();
+  setTimeout(() => $("compose")?.focus(), 230);
+}
+function renderTalk(d, i) {
+  const s = talkStep(i), t = state.talk && state.talk.id === i.id && state.talk.step === s?.id ? state.talk : null;
+  document.body.classList.add("talk-wide");
+  const msgs = [...(t?.messages || []), ...(t?.optimistic || [])];
+  const sig = JSON.stringify([i.id, s?.id, msgs.length, msgs.at(-1)?.ts, t?.running, (t?.live || []).length, !!t, state.talkShowSteps]);
+  if (d.dataset.sig === sig && $("compose")) return;  // nothing changed: keep scroll, selection and typing as they are
+  const first = !!t && d.dataset.talkFor !== `${i.id}/${s?.id}`;  // the first render with the conversation loaded
+  d.dataset.sig = sig; if (t) d.dataset.talkFor = `${i.id}/${s?.id}`;
+  const old = $("dbd"), nearBottom = old ? old.scrollHeight - old.scrollTop - old.clientHeight < 80 : true, oldTop = old?.scrollTop || 0;
+  const keep = $("compose")?.value ?? null, hadFocus = document.activeElement?.id === "compose";
+  const started = msgs.length || t?.has_session || t?.running;
+  const unanswered = msgs.length && msgs.at(-1).role !== "agent";
+  const working = t?.running || unanswered;
+  const repKey = `${i.id}/${s?.id}`;
+  const item = (m, n) => {
+    if (m.role !== "agent") return `<div class="tmsg me"><div class="tb">${m.role === "brief" ? '<div class="tlbl">Brief</div>' : ""}<div class="text">${esc(m.text)}</div></div></div>`;
+    const lastRep = m.report && !msgs.slice(n + 1).some(x => x.report);
+    return `<div class="tmsg ag" data-n="${n}"><div class="tav">${avatar("agent")}</div><div class="tbody"><div class="md">${md(m.text)}</div>
+      ${m.report ? `<div class="rcard"><button class="rhd" data-report="${esc(repKey)}">${icon("file")}<span><b>Report</b>${lastRep ? "" : " (earlier version; this opens the latest)"}</span><span class="grow"></span><span class="muted">Open</span></button></div>` : ""}
+      <div class="tmeta">${esc(fmtTs(m.ts))}</div></div></div>`;
+  };
+  const live = t?.live || [];
+  d.innerHTML = `
+    ${drawerHead(s ? s.text : i.title, working ? '<span class="tstate">Working</span>' : "")}
+    <div class="dbd talk" id="dbd">
+      ${!t ? `<div class="dempty">Loading…</div>` : !started ? `<div class="dempty">Tell the agent what to find or do. It reads Slack, Drive, Linear and the repos, writes a report and drafts your next step. Nothing is sent, and your to-do stays yours. Reply any time, while it works or after.</div>` : ""}
+      ${msgs.map(item).join("")}
+      ${working ? `<div class="tmsg ag"><div class="tav">${avatar("agent")}</div><div class="tbody"><div class="think"><span class="dots"><i></i><i></i><i></i></span><span>${t?.running ? "Working" : "Starting"}</span>
+        ${live.length ? `<button class="linkbtn" data-talk-steps>${state.talkShowSteps ? "Hide" : "Show"} ${live.length} step${live.length === 1 ? "" : "s"}</button>` : ""}</div>
+        ${live.length ? `<div class="live">${(state.talkShowSteps ? live : live.slice(-3)).map(e => `<div class="ln ${e.kind}">${e.kind === "tool" ? "› " : ""}${esc(e.text)}</div>`).join("")}</div>` : ""}</div></div>` : ""}
+    </div>
+    ${composer(started ? "Reply to the agent" : "What should the agent find or do?", started ? "Send (Enter) · new line (Shift+Enter)" : "Start the agent (Enter)", started ? "" : "Start")}`;
+  const box = $("compose");
+  // Prefill the brief only for a step the agent has never worked on, and only once the conversation has loaded.
+  box.value = first ? (!started && s ? s.text : (keep || "")) : (keep ?? "");
+  if (hadFocus || keep === null) box.focus();
+  const b = $("dbd");
+  if (first) {
+    // Open where the conversation left off: the top of the latest answer, so its report card is in view.
+    const lastAg = [...b.querySelectorAll(".tmsg.ag[data-n]")].pop();
+    b.scrollTop = lastAg && !working ? Math.max(0, b.scrollTop + lastAg.getBoundingClientRect().top - b.getBoundingClientRect().top - 12) : b.scrollHeight;
+  } else b.scrollTop = nearBottom ? b.scrollHeight : oldTop;
+}
+// Poll while the agent works or a reply of the owner's is still unanswered.
+setInterval(() => { const t = state.talk; if (state.chat && state.mode === "talk" && (!t || t.running || t.waiting || (t.messages?.length && t.messages.at(-1).role !== "agent"))) loadTalk(); }, 3000);
+
+/* ---------- menus and palette ---------- */
+const STEP_MENU = [["step_done_elsewhere", "out", "Done elsewhere", "x"], ["skip_step", "skip", "Skip this step", "z"]];  // Agent lives on the toolbar
+const ITEM_MENU = [["done_elsewhere", "out", "Whole item done elsewhere", "⇧X"], ["waiting", "hourglass", "Waiting on someone", "w"], ["snooze", "clock", "Snooze to 8 AM", "s"], ["delegate", "user", "Delegate", "d"], ["reopen", "undo", "Reopen", "u"], ["-"], ["dismiss", "ban", "Dismiss", "r", "bad"]];
+// Category filter for the list (the ⋯ next to its title): each category in view with its count; the current one checked.
+function filterMenu() {
+  const n = t => state.items.filter(i => inView(i) && (t === "all" || category(i) === t)).length;
+  return ["all", ...Object.keys(CATS).filter(t => n(t))].map(t => [`type:${t}`, state.type === t ? "check" : "blank", `${t === "all" ? "All" : CATS[t][0]}`, String(n(t))]);
+}
+function openMenu(kind, anchor) {
+  const m = $("menu"), list = kind === "step" ? STEP_MENU : kind === "filter" ? filterMenu() : ITEM_MENU;
+  m.innerHTML = list.map(x => x[0] === "-" ? '<div class="msep"></div>' : `<button class="mi ${x[4] || ""}" data-mact="${kind}:${x[0]}">${icon(x[1])}<span class="lbl">${x[2]}</span><kbd>${x[3]}</kbd></button>`).join("");
+  m.classList.add("show"); anchor.setAttribute("data-open", ""); m._anchor = anchor;
+  const r = anchor.getBoundingClientRect(), w = m.offsetWidth, h = m.offsetHeight;
+  m.style.left = Math.max(8, Math.min(r.right - w, innerWidth - w - 8)) + "px";
+  m.style.top = (r.bottom + 6 + h > innerHeight ? r.top - h - 6 : r.bottom + 6) + "px";
+}
+function closeMenu() { const m = $("menu"); m.classList.remove("show"); m._anchor?.removeAttribute("data-open"); }
+
+function commands() {
+  const i = current(), s = i && curStep(i), c = [];
+  if (i) {
+    if (s && isOwner(s.owner)) c.push(["Step", "check", VERB[s.execute?.kind || "none"], "a", () => stepAct("do_step")], ["Step", "pen", "Revise draft", "v", () => stepAct("revise_step")]);
+    if (s && !isOwner(s.owner) && !isAgent(s.owner)) c.push(["Step", "send", `Nudge ${s.owner}`, "n", () => stepAct("nudge")]);
+    if (s) c.push(["Step", "bot", "Talk to the agent", "h", () => stepAct("agent_step")], ["Step", "out", "Step done elsewhere", "x", () => stepAct("step_done_elsewhere")], ["Step", "skip", "Skip step", "z", () => stepAct("skip_step")]);
+    c.push(["Item", "chat", "Ask about this item", "c", () => openChat("ask")], ["Item", "pen", "Add a note for the lead", "i", () => openChat("note")]);
+    ITEM_MENU.filter(x => x[0] !== "-").forEach(x => c.push(["Item", x[1], x[2], x[3], () => itemAct(x[0])]));
+    c.push(["Item", "down", "Give feedback on this work", "", () => workFeedback()]);
+    c.push(["Item", "layers", state.expanded ? "Hide details" : "Show details", "m", toggleExpand]);
+  }
+  VIEWS.forEach(([k, l, ic], n) => c.push(["Go to", ic, l, String(n + 1), () => setView(k)]));
+  c.push(["App", "play", "Run leads now", "g", runLeads], ["App", "sun", "Toggle light or dark", "\\", toggleTheme]);
+  state.items.filter(x => x.status !== "stale").forEach(x => c.push(["Items", "file", x.title, "", () => jumpTo(x)]));
+  return c;
+}
+let palCmds = [], palSel = 0;
+function openPalette() { closeMenu(); $("pal").classList.add("show"); $("pal-in").value = ""; palSel = 0; renderPalette(); $("pal-in").focus(); }
+function closePalette() { $("pal").classList.remove("show"); }
+function renderPalette() {
+  const q = $("pal-in").value.trim().toLowerCase();
+  palCmds = commands().filter(c => !q || c[2].toLowerCase().includes(q) || c[0].toLowerCase().includes(q));
+  palSel = Math.min(palSel, Math.max(0, palCmds.length - 1));
+  let g = "";
+  $("pal-list").innerHTML = palCmds.map((c, n) => `${c[0] !== g ? `<div class="grp">${(g = c[0])}</div>` : ""}<button class="mi ${n === palSel ? "on" : ""}" data-pal="${n}">${icon(c[1])}<span class="lbl">${esc(c[2])}</span>${c[3] ? `<kbd>${esc(c[3])}</kbd>` : ""}</button>`).join("") || '<div class="grp">No matches</div>';
+  $("pal-list").querySelector(".mi.on")?.scrollIntoView({ block: "nearest" });
+}
+function runPalette(n) { const c = palCmds[n]; closePalette(); if (c) c[4](); }
+function jumpTo(x) { state.view = VIEW_OF[x.status] || "queue"; state.area = "all"; state.type = "all"; state.sel = Math.max(0, visible().findIndex(i => i.id === x.id)); render(); }
+
+/* ---------- work feedback ---------- */
+// Reddit-style votes on the step card: up saves at once, down asks why (the feedback dialog, preset to down).
+function voteBtns(i, s) {
+  const mine = (i.feedback || []).filter(f => f.step_id === s.id && f.rating).at(-1)?.rating;
+  return `<span class="vote"><button class="vbtn ${mine === "up" ? "on" : ""}" data-vote="up" title="Good work">${icon("up")}</button><button class="vbtn ${mine === "down" ? "on bad" : ""}" data-vote="down" title="Not good: say why">${icon("down")}</button></span>`;
+}
+async function vote(dir) {
+  const i = current(), s = i && (curStep(i) || steps(i).at(-1)); if (!s) return;
+  if (dir === "down") return workFeedback("down");
+  if (await post(i, { action: "feedback", rating: "up", tags: [], note: "", step_id: s.id })) { await load(); toast(icon("up") + "Upvoted"); }
+}
+const WORK_TAGS = ["Too narrow", "Missed context", "Wrong facts", "Wrong medium", "Too long", "Not my voice", "Thoughtful", "Great work"];
+function workFeedback(preset, custom) {
+  const i = custom ? null : current(); if (!i && !custom) return; const s = i && (curStep(i) || steps(i).at(-1));
+  const o = $("fbx"); let rating = preset || null;
+  o.querySelector("[data-fbx-rate=up]").innerHTML = icon("up"); o.querySelector("[data-fbx-rate=down]").innerHTML = icon("down");
+  const paint = () => o.querySelectorAll("[data-fbx-rate]").forEach(b => b.classList.toggle("on", b.dataset.fbxRate === rating));
+  $("fbx-tags").innerHTML = (custom ? ARCH_TAGS : WORK_TAGS).map(g => `<button class="chip" data-fbx-tag="${esc(g)}">${esc(g)}</button>`).join("");
+  $("fbx-note").value = ""; paint(); o.classList.add("show"); setTimeout(() => $("fbx-note").focus(), 0);
+  const close = () => { o.classList.remove("show"); o.onclick = null; $("fbx-note").onkeydown = null; };
+  const save = async () => {
+    const tags = [...o.querySelectorAll("[data-fbx-tag].on")].map(b => b.dataset.fbxTag), note = $("fbx-note").value.trim();
+    if (!rating && !tags.length && !note) return toast("Add a rating, a tag or a note", true);
+    close();
+    if (custom) { if (await custom({ rating, tags, note })) toast(icon("check") + "Feedback saved"); return; }
+    if (await post(i, { action: "feedback", rating, tags, note, step_id: s?.id })) { await load(); toast(icon("check") + "Feedback saved"); }
+  };
+  o.onclick = e => {
+    const r = e.target.closest("[data-fbx-rate]"), g = e.target.closest("[data-fbx-tag]"), b = e.target.closest("[data-fbx]");
+    if (r) { rating = rating === r.dataset.fbxRate ? null : r.dataset.fbxRate; return paint(); }
+    if (g) return g.classList.toggle("on");
+    if (e.target.id === "fbx" || b?.dataset.fbx === "cancel") return close();
+    if (b?.dataset.fbx === "ok") return save();
+  };
+  $("fbx-note").onkeydown = e => { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); } if (e.key === "Enter" && e.metaKey) { e.preventDefault(); save(); } };
+}
+
+/* ---------- small dialog ---------- */
+function ask({ title, sub = "", placeholder = "", multiline = true, value = "", skip = "" }) {
+  return new Promise(resolve => {
+    $("ask-title").textContent = title; $("ask-sub").textContent = sub;
+    $("ask-field").innerHTML = multiline ? `<textarea id="ask-in" style="min-height:96px" placeholder="${esc(placeholder)}">${esc(value)}</textarea>` : `<input class="text" id="ask-in" placeholder="${esc(placeholder)}" value="${esc(value)}">`;
+    $("ask").classList.add("show"); const inp = $("ask-in"); inp.focus();
+    const ok = $("ask").querySelector("[data-ask=ok]"), label = () => { ok.firstChild.textContent = skip && !inp.value.trim() ? skip + " " : "Save "; };
+    label(); inp.oninput = label;
+    const done = v => { $("ask").classList.remove("show"); $("ask").onclick = null; inp.onkeydown = null; inp.oninput = null; ok.firstChild.textContent = "Save "; resolve(v); };
+    inp.onkeydown = e => { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); done(null); } if (e.key === "Enter" && (e.metaKey || !multiline)) { e.preventDefault(); e.stopPropagation(); done(inp.value.trim() || ""); } };
+    $("ask").onclick = e => { const b = e.target.closest("[data-ask]"); if (e.target.id === "ask" || b?.dataset.ask === "cancel") done(null); else if (b) done(inp.value.trim() || ""); };
+  });
+}
+
+/* ---------- actions ---------- */
+async function post(i, body) {
+  const r = await fetch(`/api/items/${i.id}/action`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  if (!r.ok) { const e = await r.json().catch(() => ({})); toast(esc(e.error || "That didn't work"), true); return false; }
+  return true;
+}
+async function afterAct(i, msg) {
+  const before = VIEW_OF[i.status] || "queue";
+  state.items = (await (await fetch("/api/items")).json()).filter(i => i.type !== "meeting");  // meetings live on the Meetings page only
+  const now = state.items.find(x => x.id === i.id);
+  if (now && (VIEW_OF[now.status] || "queue") !== before) {
+    const el = document.querySelector(`.row[data-id="${CSS.escape(i.id)}"]`);
+    if (el) { el.classList.add("leaving"); await new Promise(r => setTimeout(r, 240)); }
+  }
+  toast(msg); render(); loadMeta();
+}
+async function stepAct(action) {
+  const i = current(); if (!i) return; const s = curStep(i); if (!s) return toast("No open step", true);
+  if (s.status === "queued") return toast("That step is already running", true);
+  if (action === "do_step" && (revising(s) || !isOwner(s.owner))) return;
+  if (action === "do_step" && s.new_recipient && !confirm(`First send from the app to ${s.execute?.target_label || "this recipient"} (${s.execute?.target}), and none of this item's sources mention them. Send anyway?`)) return;
+  if (action === "revise_step" && !isOwner(s.owner)) return toast("Revise works on your steps", true);
+  if (action === "take_back" && !(isAgent(s.owner) && s.status === "failed")) return;
+  let note = "";
+  if (action === "step_done_elsewhere") { note = await ask({ title: isOwner(s.owner) || isAgent(s.owner) ? "Where did you do it?" : `Where did ${s.owner} do it?`, sub: "The lead finds it and links it.", placeholder: "Replied to Jordan in a DM around 1:40 PM" }); if (!note) return; }
+  if (action === "agent_step" && !s.meeting_phase) return openTalk();
+  if (action === "agent_step") { note = await ask({ title: "What should the agent do?", sub: "It does the work, writes a report and drafts your next step. Nothing is sent.", value: s.agent?.brief || s.text }); if (!note) return; }
+  if (action === "revise_step") { note = await ask({ title: "What needs to change?", sub: "Rewrites the draft. Nothing is sent.", placeholder: "Plain words, no slide codes" }); if (!note) return; }
+  if (action === "nudge") { if (isOwner(s.owner) || isAgent(s.owner)) return; note = await ask({ title: `Nudge ${s.owner}?`, sub: "Drafts a short follow-up in the thread for you to send. Nothing is sent yet.", placeholder: "Optional: anything to add", multiline: false }); if (note === null) return; }
+  let override = false;
+  const blocks = action === "do_step" ? stepChecks(i, s).filter(c => c.level === "block") : [];
+  if (blocks.length) { note = await ask({ title: "Check failed. Do it anyway?", sub: blocks.map(c => c.msg).join(". ") + ". Say why it's fine; it's logged.", placeholder: "I confirmed it with Sam in Slack" }); if (!note) return; override = true; }
+  let learned = "";
+  if (action === "do_step" && s.meeting_phase === "reconcile") {
+    learned = await ask({ title: "How do these settle?", sub: "Say which is right for each, or what actually happened. The repo and queue updates are redrafted from your answer before anything is applied.", placeholder: "1: the notes are right. 2: mine; Taylor said Nov 20, not Nov 18", multiline: true });
+    if (!learned) return;
+  } else if (action === "do_step" && (s.execute?.kind || "none") === "none" && isOwner(s.owner) && i.type !== "meeting" && (s.draft || "").trim()) {
+    // Only a call or question (the step has a talking point) has an answer worth asking for; anything else just closes.
+    learned = await ask({ title: "Done. What was the answer?", sub: "Optional. It closes the step waiting on this answer and redrafts your next message. Anything you add is also used as feedback.", placeholder: "Morgan owns the FAQ; final by Friday EOD", multiline: true, skip: "Skip" });
+    if (learned === null) return;
+  }
+  if (action === "skip_step") { note = await ask({ title: "Skip this step?", sub: "Optional reason.", placeholder: "Not needed" }); if (note === null) return; }
+  const draft = $("draft")?.dataset.step === s.id ? $("draft").value : undefined;
+  if (!(await post(i, { action, step_id: s.id, note: note || "", ...(override ? { override } : {}), ...(draft !== undefined ? { draft } : {}), ...(learned ? { learned } : {}) }))) return;
+  const kind = s.execute?.kind || "none";
+  afterAct(i, { do_step: kind === "none" ? icon("check") + "Done" : icon("send") + VERB[kind] + "…", step_done_elsewhere: icon("check") + "Marked done elsewhere", skip_step: icon("skip") + "Skipped", revise_step: icon("pen") + "Revising", agent_step: icon("bot") + "Agent started", take_back: icon("user") + "It's yours", nudge: icon("pen") + "Drafting a nudge" }[action]);
+}
+async function itemAct(action, extra = {}) {
+  const i = current(); if (!i) return;
+  let note = extra.note || "", who;
+  if (action === "done_elsewhere") { note = await ask({ title: "Where was this handled?", sub: "Closes every open step. The lead links what happened.", placeholder: "On the 2 PM call; replied in #product" }); if (!note) return; }
+  if (action === "waiting" || action === "delegate") {
+    who = await ask({ title: action === "waiting" ? "Waiting on whom?" : "Delegate to whom?", placeholder: "Sam Lee", multiline: false }); if (!who) return;
+    if (action === "waiting") { note = await ask({ title: `Waiting on ${who} for what?`, placeholder: "Confirms the dial-in", multiline: false }); if (note === null) return; }
+  }
+  if (action === "dismiss") { note = await ask({ title: "Dismiss this item?", sub: "Optional reason. The lead learns from it.", placeholder: "Not mine; Sam owns this" }); if (note === null) return; }
+  if (!(await post(i, { action, note, who, ...extra }))) return;
+  if (action === "note") { await load(); return toast(icon("check") + (extra.redraft ? "Saved; lead redrafting" : "Saved for the lead")); }
+  afterAct(i, icon("check") + ({ done_elsewhere: "Marked done elsewhere", waiting: `Waiting on ${who}`, snooze: "Snoozed to 8 AM", delegate: `Delegated to ${who}`, dismiss: "Dismissed", reopen: "Reopened" }[action] || ""));
+}
+async function submitCompose(redraft = false) {
+  const i = state.mode === "talk" ? talkItem() : current(), box = $("compose"); if (!i || !box) return; const text = box.value.trim(); if (!text) return;
+  box.value = "";
+  if (state.mode === "talk") {
+    const ti = talkItem(); if (!ti) return;
+    const st = talkStep(ti);
+    state.talk = { ...(state.talk || { id: ti.id, step: st?.id }), optimistic: [{ ts: new Date().toISOString(), role: state.talk?.messages?.length || state.talk?.has_session ? OWNER : "brief", text }], waiting: true };
+    renderDrawer(); const b = $("dbd"); if (b) b.scrollTop = b.scrollHeight;
+    if (await post(ti, { action: "talk", note: text, step_id: st?.id })) { await loadTalk(); setTimeout(loadTalk, 1500); load(); }
+    else { state.talk.optimistic = []; box.value = text; renderDrawer(); }
+    return;
+  }
+  if (state.mode === "ask") { if (await post(i, { action: "ask", note: text, step_id: curStep(i)?.id })) await load(); }
+  else itemAct("note", { note: text, redraft });
+}
+function openChat(mode) { if (mode) state.mode = mode; if (!LISTS.includes(state.view) || !current()) return; setChat(true); setTimeout(() => $("compose")?.focus(), 230); }
+async function applyDraft(n, stepId) { const i = current(); if (i && await post(i, { action: "apply_draft", chat_index: n, step_id: stepId || curStep(i)?.id })) { await load(); toast(icon("check") + "Draft updated"); } }
+async function runLeads() { await loadMeta(); const t = state.leads.filter(l => state.area === "all" || l.area === state.area); for (const l of t) await fetch("/api/run/" + l.area, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }); toast(icon("play") + "Leads running"); setTimeout(loadMeta, 800); }
+function toggleExpand() { state.expanded = !state.expanded; save("jb-expanded", state.expanded); renderDetail(); }
+function toggleTheme() { const t = document.documentElement.dataset.theme === "light" ? "dark" : "light"; document.documentElement.dataset.theme = t; save("jb-theme", t); }
+function setView(v) { state.view = v; state.sel = 0; state.type = "all"; render(); }
+function move(d) { const n = visible().length; if (!n) return; state.sel = Math.min(n - 1, Math.max(0, state.sel + d)); renderList(); renderDetail(); renderDrawer(); }
+async function openReport(path) {
+  const r = await (await fetch("/api/report/" + path)).json(), [iid, sid] = path.split("/"), it = state.items.find(x => x.id === iid);
+  $("report-title").textContent = it ? (steps(it).find(x => x.id === sid)?.text || it.title) : "Agent report";
+  $("report-body").innerHTML = r.text ? md(r.text) : "<p>Report not written yet.</p>"; $("report").classList.add("show"); $("report").querySelector(".report").scrollTop = 0;
+}
+
+/* ---------- pages ---------- */
+function md(src) {
+  const inline = s => esc(s).replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, (m, t, u) => `<a href="${u.replace(/&amp;/g, "&")}" target="_blank" rel="noopener">${t}</a>`).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/`([^`]+)`/g, '<span class="mono">$1</span>');
+  let out = "", list = null; const close = () => { if (list) { out += `</${list}>`; list = null; } };
+  for (const line of src.split("\n")) {
+    let m;
+    if (/^\s*\|/.test(line)) { if (/^\s*\|[\s:|-]+\|\s*$/.test(line)) continue; const cells = line.trim().replace(/^\||\|$/g, "").split("|").map(c => inline(c.trim())); if (list !== "table") { close(); out += "<table><tr>" + cells.map(c => `<th>${c}</th>`).join("") + "</tr>"; list = "table"; } else out += "<tr>" + cells.map(c => `<td>${c}</td>`).join("") + "</tr>"; continue; }
+    if ((m = line.match(/^(#{1,3})\s+(.*)/))) { close(); out += `<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`; }
+    else if ((m = line.match(/^\s*[-*]\s+(.*)/))) { if (list !== "ul") { close(); out += "<ul>"; list = "ul"; } out += `<li>${inline(m[1])}</li>`; }
+    else if ((m = line.match(/^\s*\d+\.\s+(.*)/))) { if (list !== "ol") { close(); out += "<ol>"; list = "ol"; } out += `<li>${inline(m[1])}</li>`; }
+    else if (line.trim()) { close(); out += `<p>${inline(line)}</p>`; } else close();
+  }
+  close(); return out;
+}
+async function renderSynopsis(date) {
+  try { state.today = (await (await fetch("/api/stats")).json()).cleared_today || 0; } catch (e) {}  // only this page shows it
+  const s = await (await fetch("/api/synopsis")).json(), d = date || s.dates[0];
+  const text = date ? (await (await fetch("/api/synopsis/" + date)).json()).text : s.latest;
+  const today = d === s.dates[0], need = count("queue"), wait = count("waiting"), prog = count("progress");
+  const summary = today ? `<div class="today-line"><b>${need ? `${need} need${need === 1 ? "s" : ""} you` : "Nothing needs you"}</b> · ${wait} waiting on others · ${prog} in progress · ${state.today} cleared today</div>` : "";
+  $("detail").innerHTML = `<div class="page"><div class="h">Synopsis</div><div class="chips">${s.dates.map(x => `<button class="chip ${x === d ? "on" : ""}" data-syn="${x}">${fmtDate(x)}</button>`).join("")}</div>${summary}<div class="md" id="syn">${text ? md(text) : "<p>No synopsis yet. Each lead run writes one.</p>"}</div></div>`;
+  // Long lists show their first 5; the rest is one click away.
+  document.querySelectorAll("#syn ul").forEach(ul => {
+    const extra = [...ul.children].slice(5); if (!extra.length) return;
+    extra.forEach(li => li.hidden = true);
+    ul.insertAdjacentHTML("afterend", `<button class="btn ghost sm" data-syn-more>Show ${extra.length} more</button>`);
+  });
+}
+function shadowBlock(j) {
+  if (!j) return "";
+  const rows = j.disagreements.map(d => `<tr><td>${esc(d.summary)}</td><td>${esc(d.router)}</td><td>${esc(d.shadow)} · ${d.shadow_conf}</td><td>${esc(d.outcome)}</td></tr>`).join("");
+  return `<div class="h" style="font-size:18px; margin-top:12px">${esc(CFG.modules?.shadow_router?.name || "Shadow router")} vs router</div>
+    <div class="soft" style="font-size:13px">${esc(CFG.modules?.shadow_router?.name || "The shadow router")} routes every signal alongside the live router but acts on nothing. Sure on ${j.shadow_sure} of ${j.signals}; agrees on ${j.agree} of those. Where they differ, the outcome says who was right.</div>
+    <div class="md">${rows ? `<table><tr><th>Signal</th><th>Router</th><th>${esc(CFG.modules?.shadow_router?.name || "Shadow")}</th><th>What happened</th></tr>${rows}</table>` : "<p>No disagreements yet.</p>"}</div>`;
+}
+async function renderStats() {
+  const s = await (await fetch("/api/stats")).json(), rate = s.unchanged_rate == null ? "–" : Math.round(s.unchanged_rate * 100) + "%";
+  const ops = await (await fetch("/api/ops")).json(), isToday = ops.date === ymd(etNow());
+  const rows = Object.entries(s.by_area).map(([a, v]) => `<tr><td>${esc(a)}</td><td>${v.steps_done}</td><td>${v.unchanged}</td><td>${v.elsewhere}</td><td>${v.dismissed}</td><td>${v.inputs}</td></tr>`).join("");
+  const flags = isToday ? (ops.flags || []) : [];
+  $("detail").innerHTML = `<div class="page"><div class="h">Performance</div>
+    <div class="stats">${[["Drafts used as written", rate, "Higher is better"], ["Cleared today", s.cleared_today ?? 0, ""], ["Median time to act", s.median_minutes_to_act == null ? "–" : (s.median_minutes_to_act >= 90 ? (s.median_minutes_to_act / 60).toFixed(1) + " h" : s.median_minutes_to_act + " min"), "From draft ready to you acting"], ["Cost, last 24 hours", ops.cost_24h != null ? "$" + ops.cost_24h.toFixed(2) : "–", ops.cost_7d != null ? "$" + ops.cost_7d.toFixed(2) + " over 7 days" : ""]].map(([l, v, sub]) => `<div class="stat"><span class="muted" style="font-size:13px">${l}</span><span class="v">${v}</span>${sub ? `<span class="muted" style="font-size:12px">${sub}</span>` : ""}</div>`).join("")}</div>
+    ${flags.length ? `<div class="rec"><div class="txt"><strong>${flags.length} flag${flags.length === 1 ? "" : "s"} today.</strong> See Under the hood.</div></div>` : ""}
+    <details class="hood"><summary>Under the hood</summary>
+      <div class="md">${rows ? `<table><tr><th>Area</th><th>Steps done</th><th>As written</th><th>Elsewhere</th><th>Dismissed</th><th>Notes</th></tr>${rows}</table>` : "<p>No actions yet.</p>"}</div>
+      ${ops.date ? `<div class="stats">${[["Pipeline 24h", `$${ops.pipeline_24h.cost.toFixed(2)}`, `${ops.pipeline_24h.runs} runs`], ["Lead 24h", `$${ops.lead_24h.cost.toFixed(2)}`, `${ops.lead_24h.runs} runs`]].map(([l, v, sub]) => `<div class="stat"><span class="muted" style="font-size:13px">${l}</span><span class="v" style="font-size:20px">${v}</span><span class="muted" style="font-size:12px">${sub}</span></div>`).join("")}</div>` : ""}
+      ${flags.length ? `<div class="md"><p><strong>Flags ${esc(ops.date)}</strong></p><ul>${flags.map(f => `<li>${esc(f)}</li>`).join("")}</ul></div>` : ""}
+      ${ops.suggestion ? `<div class="rec"><div class="txt">${esc(ops.suggestion)}</div></div>` : ""}
+      ${shadowBlock(ops.shadow)}
+      <div class="h" style="font-size:16px; margin-top:12px">Jobs, last 7 days</div>
+      <div class="soft" style="font-size:13px">Cost is list-price equivalent. Quality is how often you use a job's output as written (edits count half).</div>
+      <div class="md" id="jobs"><p>Loading…</p></div>
+    </details></div>`;
+  const j = await (await fetch("/api/jobs")).json();
+  $("jobs").innerHTML = j.jobs.length ? `<table><tr><th>Job</th><th>Model</th><th>Runs</th><th>Cost</th><th>Per day</th><th>Per unit</th><th>Turns</th><th>Avg tokens</th><th>Quality</th><th>Judged</th></tr>${j.jobs.map(x => `<tr><td>${esc(x.job)}</td><td>${esc(String(x.model).replace("claude-", ""))}</td><td>${x.runs}</td><td>$${x.cost.toFixed(2)}</td><td>$${x.cost_per_day.toFixed(2)}</td><td>${x.cost_per_unit == null ? "–" : "$" + x.cost_per_unit.toFixed(2)}</td><td>${x.avg_turns ?? "–"}</td><td>${x.avg_tokens ? (x.avg_tokens / 1000).toFixed(0) + "k" : "–"}</td><td>${x.quality == null ? "–" : Math.round(x.quality * 100) + "%"}</td><td>${x.judged}</td></tr>`).join("")}</table><p class="soft">Total: $${j.total_cost.toFixed(2)} over 7 days.</p>` : "<p>No runs logged yet.</p>";
+}
+
+/* ---------- learn ---------- */
+state.learn = { slug: null, topic: null, side: "map", ask: false, mastery: false };
+const LEVELS = ["unaware", "heard of it", "can follow", "can do with help", "independent", "can teach it"];
+const STAGE = { new: "Starting", diagnostic: "Diagnostic", learning: "Learning", review: "Review", assessment: "Final assessment", mastered: "Mastered" };
+const segs = (lv, tgt) => `<div class="segs">${[1, 2, 3, 4, 5].map(n => `<i class="${n <= lv ? "on" : ""} ${n === tgt ? "tgt" : ""}"></i>`).join("")}</div>`;
+const pct = subs => subs.length ? Math.round(100 * subs.reduce((a, s) => a + s.level, 0) / (5 * subs.length)) : 0;
+function renderLearn() { return state.learn.slug ? renderTopic() : renderCodex(); }
+async function renderCodex() {
+  const { topics } = await (await fetch("/api/learn")).json(), due = topics.filter(t => t.due);
+  $("detail").innerHTML = `<div class="page" style="max-width:960px">
+    <div class="h">Learn</div>
+    <form class="teach" data-teach>${icon("bulb")}<input id="teach-in" placeholder="Teach me about…" autocomplete="off">
+      <label><input type="checkbox" data-mastery ${state.learn.mastery ? "checked" : ""}> Full mastery</label>
+      <button class="btn primary sm" type="submit">${icon("play")}Start</button></form>
+    <div class="soft" style="font-size:13px">A short diagnostic, then one question at a time. Levels are earned, not given.</div>
+    ${due.length ? `<div class="rec"><div class="txt"><strong>Due for review:</strong> ${due.map(t => `<button class="chip" data-lquiz="${esc(t.slug)}">${esc(t.topic)} · ${t.due}</button>`).join(" ")}</div></div>` : ""}
+    <div class="h" style="font-size:18px; margin-top:8px">Codex</div>
+    ${topics.length ? `<div class="codex">${topics.map(t => `<button class="ccard" data-ltopic="${esc(t.slug)}">
+        <div class="t">${esc(t.topic)}</div>
+        <div class="pbar"><i style="width:${t.pct}%"></i></div>
+        ${t.subskills.length ? `<div class="minibars">${t.subskills.map(s => `<i class="l${s.level}" title="${esc(s.name)}: ${s.level}/5"></i>`).join("")}</div>` : ""}
+        ${t.summary ? `<div class="sum">${esc(t.summary)}</div>` : ""}
+        <div class="meta"><span class="tag ${t.stage === "mastered" ? "mastered" : ""}">${STAGE[t.stage] || esc(t.stage)}</span><span>${t.pct}%</span>${t.due ? `<span class="tag due">${t.due} due</span>` : ""}${t.busy ? `<span class="dots"><i></i><i></i><i></i></span>` : ""}<span style="margin-left:auto">${t.updated ? fmtDate(t.updated.slice(0, 10)) : ""}</span></div>
+      </button>`).join("")}</div>` : `<div class="empty"><div class="h">Nothing learned yet</div><div>Type a topic above to start.</div></div>`}
+  </div>`;
+  if (!state.learn.slug) $("teach-in")?.focus();
+}
+function lmsg(m) {
+  const me = m.role === OWNER, src = (m.sources || []).length ? `<div class="src">${m.sources.map(x => `<a href="${safeUrl(x.url)}" target="_blank" rel="noopener">${esc(x.label || "source")}</a>`).join(" · ")}</div>` : "";
+  const tag = m.mode && !["continue", "start"].includes(m.mode) ? `<div class="who">${{ ask: "Question", quiz: "Review quiz", final: "Final assessment" }[m.mode] || ""}</div>` : "";
+  return `<div class="msg ${me ? "me" : ""} ${m.error ? "err" : ""}"><div class="bubble">${tag}<div class="text">${me ? esc(m.text) : md(m.text)}</div>${src}</div></div>`;
+}
+// The session page is built once per topic; polls then patch only what changed (the streaming reply, a new
+// message, the side panel, the busy state), so typing and replies never redraw or jump the page.
+function lsideHTML(t) {
+  const subs = t.subskills || [], today = ymd(etNow()), side = state.learn.side;
+  const notes = (t.notes_md ? md(t.notes_md) : "<p class='muted'>Notes build as you learn.</p>") + ((t.misconceptions || []).length ? `<h2>Misconceptions caught</h2><ul>${t.misconceptions.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : "");
+  const hist = (t.history || []).slice().reverse().map(h => `<li><strong>${esc(h.subskill)}</strong> ${h.from} → ${h.to}<br><span class="muted">${esc(h.why || "")} · ${fmtDate(h.ts.slice(0, 10))}</span></li>`).join("");
+  return `<div class="chips">${[["map", "Skill map"], ["notes", "Notes"], ["history", "History"]].map(([k, l]) => `<button class="chip ${side === k ? "on" : ""}" data-lside="${k}">${l}</button>`).join("")}</div>
+    ${side === "map" ? `<div class="smap">${subs.length ? subs.map(s => `<div class="srow"><div class="top"><span>${esc(s.name)}</span><span class="lv">${s.level}/5 · ${LEVELS[s.level]}</span></div>${segs(s.level, s.target || t.target)}${s.next_review ? `<span class="muted" style="font-size:11px">${s.next_review <= today ? "Review due" : "Review " + fmtDate(s.next_review)}</span>` : ""}</div>`).join("") : `<span class="muted">The map appears after the first reply.</span>`}</div>`
+    : side === "notes" ? `<div class="smap md lnotes">${notes}</div>`
+    : `<div class="smap md lnotes">${hist ? `<ul>${hist}</ul>` : "<p class='muted'>No level changes yet.</p>"}<p class="muted">Started ${fmtDate(t.created.slice(0, 10))}${t.mastered_at ? ` · mastered ${fmtDate(t.mastered_at.slice(0, 10))}` : ""}</p></div>`}`;
+}
+function lheadHTML(t) {
+  return `<span class="tag ${t.stage === "mastered" ? "mastered" : ""}">${STAGE[t.stage] || esc(t.stage)}</span><span class="muted">${pct(t.subskills || [])}%</span>`;
+}
+function lchipsHTML(t) {
+  const subs = t.subskills || [], today = ymd(etNow()), L = state.learn;
+  const due = subs.filter(s => s.level > 0 && (s.next_review || "9") <= today).length, off = t.busy ? "disabled" : "";
+  return `<button class="chip ${L.ask ? "" : "on"}" data-lask="0">Answer</button><button class="chip ${L.ask ? "on" : ""}" data-lask="1">Ask a question</button>
+    <span style="flex:1"></span>
+    ${["just tell me", "harder", "easier"].map(c => `<button class="chip" data-lcmd="${c}" ${off}>${c[0].toUpperCase() + c.slice(1)}</button>`).join("")}
+    <button class="chip" data-lact="quiz" ${t.busy || !due ? "disabled" : ""} title="Spaced review of what's due">Quiz me${due ? ` · ${due}` : ""}</button>
+    <button class="chip" data-lact="final" ${t.busy || !subs.length ? "disabled" : ""}>Final assessment</button>`;
+}
+function lliveHTML(t) {
+  return t.busy ? (t.live ? lmsg({ role: "tutor", text: t.live }) : `<div class="thinking"><span class="dots"><i></i><i></i><i></i></span>${t.pending_mode === "start" ? "Building the skill map…" : "Thinking…"}</div>`) : "";
+}
+function lautosize(el) { el.style.height = "auto"; el.style.height = Math.min(el.scrollHeight, 200) + "px"; }
+async function renderTopic() {
+  const slug = state.learn.slug, r = await fetch("/api/learn/" + slug);
+  if (!r.ok) { state.learn.slug = null; return renderCodex(); }
+  const t = await r.json(), prev = state.learn.topic, built = $("lmsgs") && prev?.slug === slug;
+  state.learn.topic = t;
+  if (!built) {
+    $("detail").innerHTML = `<div class="page lpage">
+      <div class="ltop"><button class="btn ghost sm" data-lback>${icon("undo")}Codex</button>
+        <div class="h" style="flex:1; min-width:200px">${esc(t.topic)}</div><span id="lstage" style="display:flex; gap:8px; align-items:center">${lheadHTML(t)}</span>
+        <button class="iconbtn" data-menu-learn title="Archive">${icon("more")}</button></div>
+      <div class="lsess">
+        <div class="lconv">
+          <div id="lmsgs"><div id="lhist">${(t.messages || []).map(lmsg).join("")}</div><div id="llive">${lliveHTML(t)}</div></div>
+          <div class="lcomp">
+            <div class="chips" id="lchips">${lchipsHTML(t)}</div>
+            <textarea id="lcomp-in" rows="2" placeholder=""></textarea>
+            <div class="bar"><span class="muted" style="font-size:12px">Enter to send · Shift+Enter for a new line</span><span class="grow"></span><button class="btn primary sm" data-lsend>${icon("send")}<span id="lsend-l"></span></button></div>
+          </div>
+        </div>
+        <div class="lside" id="lside">${lsideHTML(t)}</div>
+      </div></div>`;
+    lsync(t); const m = $("lmsgs"); m.scrollTop = m.scrollHeight;
+    if (!t.busy) $("lcomp-in").focus();
+    return;
+  }
+  // Patch in place.
+  const m = $("lmsgs"), atBottom = m.scrollHeight - m.scrollTop - m.clientHeight < 80;
+  const nPrev = (prev.messages || []).length, nNow = (t.messages || []).length;
+  if (nNow > nPrev) $("lhist").insertAdjacentHTML("beforeend", t.messages.slice(nPrev).map(lmsg).join(""));
+  else if (nNow !== nPrev) $("lhist").innerHTML = (t.messages || []).map(lmsg).join("");
+  if (nNow !== nPrev || t.busy !== prev.busy || t.live !== prev.live) $("llive").innerHTML = lliveHTML(t);
+  if (nNow !== nPrev || t.updated !== prev.updated) { $("lside").innerHTML = lsideHTML(t); $("lstage").innerHTML = lheadHTML(t); }
+  if (t.busy !== prev.busy || nNow !== nPrev) { $("lchips").innerHTML = lchipsHTML(t); lsync(t); }
+  if (atBottom) m.scrollTop = m.scrollHeight;
+  if (prev.busy && !t.busy) $("lcomp-in").focus();
+}
+function lsync(t) {
+  const ta = $("lcomp-in"), L = state.learn;
+  ta.disabled = !!t.busy;
+  ta.placeholder = L.ask ? "Ask anything about this topic. No quiz, levels don't change." : "Your answer…";
+  $("lsend-l").textContent = L.ask ? "Ask" : "Send";
+  document.querySelector("[data-lsend]").disabled = !!t.busy;
+}
+document.addEventListener("input", e => {
+  if (e.target.id !== "lcomp-in") return;
+  const m = $("lmsgs"), atBottom = m && m.scrollHeight - m.scrollTop - m.clientHeight < 80;
+  lautosize(e.target);
+  if (atBottom) m.scrollTop = m.scrollHeight;  // a growing box shrinks the pane; keep the latest message in view
+});
+async function lpost(slug, body) {
+  const r = await fetch("/api/learn" + (slug ? "/" + slug : ""), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const j = await r.json(); if (!r.ok) toast(esc(j.error || "Failed"), true); return r.ok ? j : null;
+}
+async function lsend(action, text) {
+  const j = await lpost(state.learn.slug, { action, text }); if (!j) return;
+  const ta = $("lcomp-in"); if (ta && action !== "quiz" && action !== "final") { ta.value = ""; lautosize(ta); }
+  const m = $("lmsgs"); if (m) m.scrollTop = m.scrollHeight;
+  renderTopic();
+}
+document.addEventListener("submit", async e => {
+  if (!e.target.matches("[data-teach]")) return; e.preventDefault();
+  const topic = $("teach-in").value.trim(); if (!topic) return;
+  const j = await lpost(null, { topic, mastery: state.learn.mastery }); if (!j) return;
+  state.learn.slug = j.slug; renderTopic();
+});
+document.addEventListener("change", e => { if (e.target.matches("[data-mastery]")) state.learn.mastery = e.target.checked; });
+document.addEventListener("keydown", e => {
+  if (e.target.id === "lcomp-in" && e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.stopImmediatePropagation(); document.querySelector("[data-lsend]")?.click(); }
+}, true);
+document.addEventListener("click", async e => {
+  const q = s => e.target.closest(s); let el;
+  if (state.view !== "learn") return;
+  if ((el = q("[data-ltopic]"))) { state.learn.slug = el.dataset.ltopic; state.learn.side = "map"; return renderTopic(); }
+  if ((el = q("[data-lquiz]"))) { state.learn.slug = el.dataset.lquiz; return lsend("quiz"); }
+  if (q("[data-lback]")) { state.learn.slug = null; state.learn.topic = null; return renderCodex(); }
+  if ((el = q("[data-lside]"))) { state.learn.side = el.dataset.lside; $("lside").innerHTML = lsideHTML(state.learn.topic); return; }
+  if ((el = q("[data-lask]"))) { state.learn.ask = el.dataset.lask === "1"; $("lchips").innerHTML = lchipsHTML(state.learn.topic); lsync(state.learn.topic); return $("lcomp-in").focus(); }
+  if ((el = q("[data-lcmd]"))) return lsend("say", el.dataset.lcmd);
+  if ((el = q("[data-lact]"))) return lsend(el.dataset.lact);
+  if (q("[data-lsend]")) { const v = $("lcomp-in").value.trim(); if (!v) return; return lsend(state.learn.ask ? "ask" : "say", v); }
+  if (q("[data-menu-learn]")) { if (confirm(`Archive "${state.learn.topic?.topic}"? It leaves the Codex but stays on disk.`)) { await lpost(state.learn.slug, { action: "archive" }); state.learn.slug = null; renderCodex(); } }
+});
+// Fast poll while the tutor is answering, so its reply streams in; slow poll for Codex cards.
+setInterval(() => { if (state.view === "learn" && state.learn.slug && state.learn.topic?.busy) renderTopic(); }, 600);
+setInterval(() => { if (state.view === "learn" && !state.learn.slug && !isText() && document.querySelector(".ccard .dots")) renderCodex(); }, 3000);
+
+/* ---------- solutions architect ---------- */
+state.arch = { id: null, depth: "quick", q: null };
+const ARCH_TAGS = ["Wrong facts", "Missed a source", "Outdated", "Too long", "Not client-ready", "Leaked internal", "Too narrow", "Great answer"];
+const CONF = { high: "ok", medium: "warn", low: "bad" };
+function renderArchitect() { return state.arch.id ? renderArchQ() : renderArchHome(); }
+async function renderArchHome() {
+  const { questions } = await (await fetch("/api/architect")).json(), A = state.arch;
+  $("detail").innerHTML = `<div class="page" id="arch-page" style="max-width:960px">
+    <div class="h">Solution Architect</div>
+    <div class="soft" style="font-size:13px">${esc(CFG.modules?.architect?.description || "Paste a client's question. It searches your docs, specs and repos, then a second agent checks every claim against its source.")}</div>
+    <div class="askbox">
+      <textarea id="arch-q" rows="4" placeholder="${esc(CFG.modules?.architect?.placeholder || "Paste the client's question")}"></textarea>
+      <div class="bar"><input class="text" id="arch-ctx" placeholder="Client or context (optional)" style="flex:1; min-width:180px">
+        <div class="seg"><button class="${A.depth === "quick" ? "on" : ""}" data-arch-depth="quick" title="ADRs, specs, docs and ledger; Slack only if needed">Quick</button><button class="${A.depth === "exhaustive" ? "on" : ""}" data-arch-depth="exhaustive" title="Every source, including Slack, Drive, Linear and recent PRs">Exhaustive</button></div>
+        <button class="btn primary sm" data-arch-ask>${icon("search")}Find the answer</button></div>
+    </div>
+    ${questions.length ? `<div class="h" style="font-size:16px; margin-top:8px">Asked</div><div class="alist">${questions.map(x => `<button class="arow" data-arch="${esc(x.id)}">
+        <div class="aq">${esc(x.question)}</div>
+        <div class="meta">${x.context ? `<span>${esc(x.context)}</span>` : ""}${x.busy ? `<span class="dots"><i></i><i></i><i></i></span><span>Working</span>` : x.error ? `<span class="tag bad">Failed</span>` : x.confidence ? `<span class="tag ${CONF[x.confidence] || ""}">${esc(x.confidence)} confidence</span>` : ""}${x.turns > 1 ? `<span>${x.turns} turns</span>` : ""}${x.rating ? icon(x.rating) : ""}<span style="margin-left:auto">${esc(fmtTs(x.updated))}</span></div>
+      </button>`).join("")}</div>` : ""}
+  </div>`;
+  $("arch-q")?.focus();
+}
+function archTurn(t, n) {
+  const f = t.final, claims = f?.claims || [], tally = ["confirmed", "revised", "refuted", "unsupported"].map(k => [k, claims.filter(c => c.outcome === k).length]).filter(x => x[1]);
+  const src = c => (c.sources || []).map(x => `<div class="src"><b>${esc(x.label || "")}</b> <span class="mono">${esc(x.ref || "")}</span>${x.date ? ` · ${esc(x.date)}` : ""}${x.quote ? `<div class="quote">“${esc(x.quote)}”</div>` : ""}</div>`).join("");
+  const list = (lbl, xs, cls = "") => xs.length ? `<div class="inote ${cls}"><div class="lbl">${lbl}</div><ul>${xs.map(x => `<li>${x}</li>`).join("")}</ul></div>` : "";
+  return `<div class="aturn">
+    <div class="msg me"><div class="bubble">${t.kind === "revise" ? `<div class="who">Change requested</div>` : ""}<div class="text">${esc(t.question)}</div></div></div>
+    ${t.pending ? "" : t.error && !f ? `<div class="rec"><div class="txt" style="color:var(--bad)">${esc(firstSentence(t.error, 300))}</div></div>` : f ? `
+    <div class="card acard">
+      <div class="chead"><span class="k">Answer</span>${f.confidence ? `<span class="tag ${CONF[f.confidence] || ""}">${esc(f.confidence)} confidence</span>` : ""}
+        <span class="muted" style="font-size:12px">${f.verified ? (tally.map(([k, v]) => `${v} ${k}`).join(" · ") || "checked") : "not checked by the reviewer"}</span><span class="grow"></span>
+        <button class="btn ghost sm" data-arch-modify="${n}">${icon("pen")}Modify</button><button class="btn ghost sm" data-arch-copy="${n}">${icon("copy")}Copy</button></div>
+      <div class="cbody"><div class="ans plain">${esc(f.shareable_answer || "")}</div>
+        ${(f.questions || []).length ? `<div class="qcov">${f.questions.map(x => `<span class="tag ${x.answered === "yes" ? "ok" : x.answered === "partly" ? "warn" : "bad"}" title="${esc(x.where || "")}">${esc(firstSentence(x.q, 60))}</span>`).join("")}</div>` : ""}
+        ${(f.missing_questions || []).length ? `<div class="inote warn"><div class="lbl">Reviewer added answers the first draft skipped</div><ul>${f.missing_questions.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
+        ${f.internal_notes ? `<div class="inote"><div class="lbl">For you, not the client</div>${md(f.internal_notes)}</div>` : ""}
+        ${(f.changes || []).length ? `<div class="inote"><div class="lbl">Changed</div><ul>${f.changes.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
+        ${list("Reviewer: possible internal detail in the answer", (f.leaks || []).map(esc), "bad")}
+        ${list("Sources disagree", (f.conflicts || []).map(c => `<b>${esc(c.topic)}</b>: ${esc((c.sides || []).join(" vs "))}${c.decider ? ` <span class="muted">(${esc(c.decider)} decides)</span>` : ""}`), "warn")}
+        ${list("Not answered by any source", (f.gaps || []).map(esc))}
+        ${list("Not confirmed in an ADR, spec or code", (f.unconfirmed || []).map(c => esc(c.msg)), "warn")}
+        ${list("Worth asking the client", (f.client_questions || []).map(esc))}
+        <details class="hood"><summary>Claims and sources (${claims.length})</summary>${claims.map(c => `<div class="claim"><div><span class="tag ${{ confirmed: "ok", revised: "warn", refuted: "bad", unsupported: "bad" }[c.outcome] || ""}">${esc(c.outcome || "unchecked")}</span> ${esc(c.text)}${c.shareable === false ? ' <span class="muted">(internal)</span>' : ""}</div>${c.review ? `<div class="muted" style="font-size:12px">${esc(c.review)}</div>` : ""}${src(c)}</div>`).join("")}</details>
+        <details class="hood"><summary>What was searched (${(f.searched || []).length})</summary><ul class="md">${(f.searched || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul></details>
+      </div></div>` : ""}
+  </div>`;
+}
+function archLive(q) {
+  const pr = q.progress || { phase: "Starting", steps: [], count: 0 };
+  return q.busy ? `<div class="card"><div class="cbody"><div class="thinking"><span class="dots"><i></i><i></i><i></i></span>${esc(pr.phase)}${pr.count ? ` · ${pr.count} looks so far` : ""}</div>
+    ${pr.steps.length ? `<ul class="steps">${pr.steps.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}</div></div>` : "";
+}
+async function renderArchQ() {
+  const r = await fetch("/api/architect/" + state.arch.id);
+  if (!r.ok) { state.arch.id = null; return renderArchHome(); }
+  const q = await r.json(), prev = state.arch.q, A = state.arch; state.arch.q = q;
+  if ($("arch-turns") && prev?.id === q.id && prev.busy && q.busy && prev.turns.length === q.turns.length) { $("arch-live").innerHTML = archLive(q); return; }
+  const draft = $("arch-f")?.value || "";
+  $("detail").innerHTML = `<div class="page" id="arch-page" style="max-width:900px">
+    <div class="ltop"><button class="btn ghost sm" data-arch-back>${icon("undo")}Solution Architect</button><span class="grow"></span>${q.context ? `<span class="muted">${esc(q.context)}</span>` : ""}
+      <button class="iconbtn" data-arch-fb="up" title="Good answer">${icon("up")}</button><button class="iconbtn" data-arch-fb="down" title="Not good: say why">${icon("down")}</button>
+      <button class="iconbtn" data-arch-archive title="Archive">${icon("x")}</button></div>
+    <div id="arch-turns">${q.turns.map(archTurn).join("")}</div>
+    <div id="arch-live">${archLive(q)}</div>
+    ${(q.feedback || []).length ? `<div class="fblist">${q.feedback.map(f => `<div class="fbitem">${f.rating ? icon(f.rating) : ""}${(f.tags || []).map(g => `<span class="tag">${esc(g)}</span>`).join("")}${f.note ? `<span>${esc(f.note)}</span>` : ""}</div>`).join("")}</div>` : ""}
+    <div class="askbox"><textarea id="arch-f" rows="2" placeholder="Follow-up question" ${q.busy ? "disabled" : ""}>${esc(draft)}</textarea>
+      <div class="bar"><span class="grow"></span><div class="seg"><button class="${A.depth === "quick" ? "on" : ""}" data-arch-depth="quick">Quick</button><button class="${A.depth === "exhaustive" ? "on" : ""}" data-arch-depth="exhaustive">Exhaustive</button></div>
+        <button class="btn primary sm" data-arch-follow ${q.busy ? "disabled" : ""}>${icon("send")}Ask</button></div></div>
+  </div>`;
+}
+async function archPost(id, body) {
+  const r = await fetch("/api/architect" + (id ? "/" + id : ""), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const j = await r.json(); if (!r.ok) toast(esc(j.error || "Failed"), true); return r.ok ? j : null;
+}
+document.addEventListener("click", async e => {
+  if (state.view !== "architect") return;
+  const q = s => e.target.closest(s); let el;
+  if ((el = q("[data-arch-depth]"))) { state.arch.depth = el.dataset.archDepth; el.parentElement.querySelectorAll("button").forEach(b => b.classList.toggle("on", b === el)); return; }
+  if (q("[data-arch-ask]")) {
+    const question = $("arch-q").value.trim(); if (!question) return $("arch-q").focus();
+    const j = await archPost(null, { question, context: $("arch-ctx").value.trim(), depth: state.arch.depth }); if (!j) return;
+    state.arch.id = j.id; state.arch.q = null; return renderArchQ();
+  }
+  if ((el = q("[data-arch]"))) { state.arch.id = el.dataset.arch; state.arch.q = null; return renderArchQ(); }
+  if (q("[data-arch-back]")) { state.arch.id = null; return renderArchHome(); }
+  if (q("[data-arch-follow]")) { const text = $("arch-f").value.trim(); if (!text) return; if (await archPost(state.arch.id, { action: "followup", text, depth: state.arch.depth })) { $("arch-f").value = ""; state.arch.q = null; renderArchQ(); } return; }
+  if ((el = q("[data-arch-modify]"))) {
+    const text = await ask({ title: "What should change?", sub: "It rewrites this answer and checks it again. Your note is also saved as feedback, so it can become a rule.", placeholder: "Don't offer a higher rate limit; say we'll review after launch. Shorter on point 2." });
+    if (!text) return;
+    if (await archPost(state.arch.id, { action: "revise", text, turn: +el.dataset.archModify, depth: state.arch.depth })) { state.arch.q = null; renderArchQ(); toast(icon("pen") + "Rewriting"); }
+    return;
+  }
+  if ((el = q("[data-arch-copy]"))) { const t = state.arch.q.turns[+el.dataset.archCopy]; await navigator.clipboard.writeText(t.final.shareable_answer || ""); archPost(state.arch.id, { action: "copied" }); return toast(icon("copy") + "Answer copied"); }
+  if ((el = q("[data-arch-fb]"))) return workFeedback(el.dataset.archFb, async fb => { const ok = !!(await archPost(state.arch.id, { action: "feedback", ...fb })); if (ok) { state.arch.q = null; renderArchQ(); } return ok; });
+  if (q("[data-arch-archive]")) { if (confirm("Archive this question?")) { await archPost(state.arch.id, { action: "archive" }); state.arch.id = null; renderArchHome(); } }
+});
+document.addEventListener("keydown", e => {
+  if ((e.target.id === "arch-q" || e.target.id === "arch-f") && e.key === "Enter" && e.metaKey) { e.preventDefault(); document.querySelector(e.target.id === "arch-q" ? "[data-arch-ask]" : "[data-arch-follow]")?.click(); }
+}, true);
+setInterval(() => { if (state.view !== "architect") return; if (state.arch.id && state.arch.q?.busy) renderArchQ(); else if (!state.arch.id && !isText() && document.querySelector(".arow .dots")) renderArchHome(); }, 2000);
+
+/* ---------- usage tracking (local only: log/ui.jsonl, read by the weekly UX review) ---------- */
+const UI_Q = []; let uiVia = "click";
+function track(e, data = {}) { UI_Q.push({ ts: new Date().toISOString(), e, view: state.view, via: uiVia, ...data }); }
+setInterval(() => { if (!UI_Q.length) return; const batch = UI_Q.splice(0); fetch("/api/ui", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(batch) }).catch(() => {}); }, 5000);
+addEventListener("pagehide", () => { if (UI_Q.length) navigator.sendBeacon("/api/ui?t=" + CFG.token, new Blob([JSON.stringify(UI_Q.splice(0))], { type: "application/json" })); });
+document.addEventListener("keydown", () => { uiVia = "key"; }, true);
+document.addEventListener("pointerdown", () => { uiVia = "click"; }, true);
+document.addEventListener("click", e => {
+  const el = e.target.closest("button, a, [data-n], [data-ltopic], [data-arch]"); if (!el) return;
+  const attr = [...el.attributes].find(a => a.name.startsWith("data-") && !["data-id", "data-open"].includes(a.name));
+  track("click", { target: attr ? attr.name.slice(5) + (attr.value && attr.value.length < 40 ? ":" + attr.value : "") : (el.textContent || "").trim().slice(0, 30) });
+}, true);
+const _setView = setView; setView = v => { track("view", { to: v }); _setView(v); };
+const _toast = toast; toast = (html, bad = false) => { if (bad) track("error", { msg: html.replace(/<[^>]+>/g, "").slice(0, 120) }); _toast(html, bad); };
+const _stepAct = stepAct; stepAct = a => { const i = current(); track("step_action", { action: a, item_age_min: i?.created ? Math.round((Date.now() - new Date(i.created)) / 60000) : null, type: i?.type }); return _stepAct(a); };
+const _itemAct = itemAct; itemAct = (a, x) => { track("item_action", { action: a }); return _itemAct(a, x); };
+const _runPalette = runPalette; runPalette = n => { track("palette", { cmd: palCmds[n]?.[2]?.slice(0, 40), query: $("pal-in").value.slice(0, 40) }); uiVia = "palette"; return _runPalette(n); };
+const _setChat = setChat; setChat = o => { if (o) track("drawer_open", { mode: state.mode }); return _setChat(o); };
+const _toggleExpand = toggleExpand; toggleExpand = () => { track("details", { open: !state.expanded }); return _toggleExpand(); };
+track("session_start", { w: innerWidth, h: innerHeight, theme: document.documentElement.dataset.theme });
+
+/* ---------- meetings ---------- */
+// The week's meetings (loaded every Monday from Google Calendar, bin/calendar.sh). Click a meeting to open it; "I'm running
+// this meeting" drafts the agenda right there (bin/meeting.sh prep), and it opens inline when ready. After the call,
+// "Meeting done" reads the notes and proposes updates to every item (bin/meeting.sh debrief).
+state.mtg = { off: 0, open: new Set(), reports: {}, agendas: {}, exp: new Set(), drafts: {} };
+const ymd = t => `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+const weekOf = () => { const t = etNow(); t.setDate(t.getDate() - (t.getDay() + 6) % 7 + 7 * state.mtg.off); return ymd(t); };
+const hm = iso => new Date(iso).toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" });
+const dayLabel = d => new Date(d + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+async function mtgReport(id, sid) {
+  const k = id + "/" + sid; if (state.mtg.reports[k] === undefined) { state.mtg.reports[k] = null; const r = await (await fetch(`/api/report/${id}/${sid}`)).json(); state.mtg.reports[k] = r.text || ""; renderMeetings(); }
+  return state.mtg.reports[k];
+}
+// The meeting at a glance: actions, people with their RSVP, and what Google holds (notes, files, location).
+const MEET_NOISE = /(join with google meet|meet\.google\.com|join by phone|^\s*\+?\d[\d\s().-]{6,}|pin:|more phone numbers|learn more about meet|zoom\.us\/(j|u)|meeting id|passcode|one tap mobile|dial by your location|calendly\.com|need to make changes|invitation from google calendar|you are receiving this|forwarding this invitation|-::~|~:~::|this is a google meet web conference|you can join this meeting from your computer|^location:|^event name|minute meeting$)/i;
+function cleanDesc(t) {
+  const lines = String(t || "").replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").split("\n").map(l => l.trimEnd());
+  const keep = lines.filter(l => l.trim() && !MEET_NOISE.test(l));
+  return keep.join("\n").trim();
+}
+const linkify = t => esc(t).replace(/(https?:\/\/[^\s<]+)/g, u => { let h = u; try { h = new URL(u.replace(/&amp;/g, "&")).hostname.replace(/^www\./, ""); } catch {} return `<a href="${u}" target="_blank" rel="noopener">${h}</a>`; });
+// Google sends descriptions as HTML. Keep a safe subset (lists, bold, italics, links, line breaks); drop everything
+// else, and drop blocks that are only Meet/Zoom/Calendly boilerplate.
+// Plain-text invites (the fetch flattens Google's HTML): a list marker on its own line belongs to the next line.
+// Rebuild numbered and bulleted lists; a short line followed by a list reads as its heading.
+function plainInvite(t) {
+  if (!t) return "";
+  const raw = t.split("\n").map(l => l.trim()).filter(Boolean), lines = [];
+  for (let k = 0; k < raw.length; k++) {
+    const m = raw[k].match(/^(\d+[.)]|[*•\-–])$/);
+    if (m && k + 1 < raw.length) { lines.push(raw[k] + " " + raw[++k]); continue; }
+    lines.push(raw[k]);
+  }
+  let out = "", list = null;
+  const close = () => { if (list) { out += `</${list}>`; list = null; } };
+  lines.forEach((l, k) => {
+    const num = l.match(/^\d+[.)]\s+(.*)$/), bul = l.match(/^[*•\-–]\s+(.*)$/);
+    const kind = num ? "ol" : bul ? "ul" : null;
+    if (kind) { if (list !== kind) { close(); out += `<${kind}>`; list = kind; } out += `<li>${linkify((num || bul)[1])}</li>`; return; }
+    close();
+    const next = lines[k + 1] || "", isHead = l.length < 60 && !/[.,;:]$/.test(l) && /^(\d+[.)]|[*•\-–])\s/.test(next);
+    out += isHead ? `<div class="ih">${linkify(l)}</div>` : `<p>${linkify(l)}</p>`;
+  });
+  close();
+  return `<div class="rich">${out}</div>`;
+}
+function inviteHTML(t) {
+  const src = String(t || "");
+  if (!/<[a-z][\s\S]*>/i.test(src)) return plainInvite(cleanDesc(src));
+  const doc = new DOMParser().parseFromString(`<div>${src}</div>`, "text/html"), OK = new Set(["B", "STRONG", "I", "EM", "U", "A", "UL", "OL", "LI", "BR", "P", "DIV", "SPAN"]);
+  const walk = n => {
+    for (const c of [...n.childNodes]) {
+      if (c.nodeType === 3) { if (MEET_NOISE.test(c.textContent)) c.remove(); continue; }
+      if (c.nodeType !== 1 || !OK.has(c.tagName)) { if (c.nodeType === 1) { walk(c); c.replaceWith(...c.childNodes); } else c.remove(); continue; }
+      [...c.attributes].forEach(a => { if (!(c.tagName === "A" && a.name === "href" && /^https?:/i.test(a.value))) c.removeAttribute(a.name); });
+      if (c.tagName === "A") { c.target = "_blank"; c.rel = "noopener"; if (/^https?:\/\//.test(c.textContent.trim())) { try { c.textContent = new URL(c.href).hostname.replace(/^www\./, ""); } catch {} } }
+      walk(c);
+      if (["LI", "P", "DIV", "SPAN", "B", "STRONG"].includes(c.tagName) && !c.textContent.trim()) c.remove();
+    }
+  };
+  walk(doc.body.firstChild);
+  const html = doc.body.firstChild.innerHTML.replace(/(<br>\s*){3,}/g, "<br><br>").trim();
+  return html ? `<div class="rich">${html}</div>` : "";
+}
+function mtgInfo(ev) {
+  const st = ev.state, rsvp = { accepted: ["ok", "Going"], declined: ["bad", "Declined"], tentative: ["warn", "Maybe"], needsAction: ["mute", "No reply"] };
+  const invite = inviteHTML(ev.description);
+  const files = ev.attachments || [];
+  const people = [...(ev.attendees || [])].sort((a, b) => (a.response === "declined") - (b.response === "declined"));
+  return `<div class="mp-actions">
+      ${!st ? `<button class="btn primary" data-mtg-prep="${esc(ev.id)}" data-date="${esc(ev.date)}">${icon("play")}I'm running this meeting</button>` : ""}
+      ${ev.conference ? `<a class="btn" href="${safeUrl(ev.conference)}" target="_blank" rel="noopener">${icon("video")}Join</a>` : ""}
+      ${ev.url ? `<a class="btn" href="${safeUrl(ev.url)}" target="_blank" rel="noopener">${icon("calendar")}Calendar</a>` : ""}
+    </div>
+    ${ev.last_notes?.url ? `<div class="mp-sec"><div class="mp-k">Last time</div><div class="mp-v mp-files"><a href="${safeUrl(ev.last_notes.url)}" target="_blank" rel="noopener">${icon("file")}${esc(ev.last_notes.title || "Notes from the last meeting")}${ev.last_notes.date ? ` <span class="muted">${esc(fmtDate(ev.last_notes.date))}</span>` : ""}</a></div></div>` : ""}
+    ${ev.location ? `<div class="mp-sec"><div class="mp-k">Where</div><div class="mp-v">${linkify(ev.location)}</div></div>` : ""}
+    ${invite ? `<div class="mp-sec"><div class="mp-k">From the invite</div><div class="mp-v mp-notes ${state.mtg.notesOpen === ev.id ? "" : "clamp"}">${invite}</div>${state.mtg.notesOpen === ev.id ? "" : `<button class="linkbtn" data-notes-more="${esc(ev.id)}">Show all</button>`}</div>` : ""}
+    ${files.length ? `<div class="mp-sec"><div class="mp-k">Attached</div><div class="mp-v mp-files">${files.map(f => `<a href="${safeUrl(f.url)}" target="_blank" rel="noopener">${icon("file")}${esc(f.title || "File")}</a>`).join("")}</div></div>` : ""}
+    <div class="mp-sec"><div class="mp-k">People</div><div class="mp-v mp-people">${people.map(a => { const [k, l] = rsvp[a.response] || rsvp.needsAction; return `<span class="person ${a.response === "declined" ? "out" : ""}" title="${esc(a.email || "")} · ${l}"><span class="rd ${k}"></span>${esc(a.name || a.email)}${a.email === ev.organizer ? ' <span class="muted">organizer</span>' : ""}</span>`; }).join("")}</div></div>
+    `;
+}
+function mtgBody(ev) {
+  const st = ev.state, live = pr => `<div class="thinking"><span class="dots"><i></i><i></i><i></i></span>${esc(pr.label)}${pr.count ? ` · ${pr.count} looks so far` : ""}</div>`;  // the agent's raw tool calls stay out of the panel
+  const people = "";  // people, links and notes are in the panel above (mtgInfo)
+  if (!st) return "";
+  const rep = sid => { const t = state.mtg.reports[st.id + "/" + sid]; if (t === undefined) mtgReport(st.id, sid); return t ? `<div class="md mtg-rep">${md(t)}</div>` : `<div class="muted">Loading…</div>`; };
+  const item = "";
+  if (st.phase === "prep") return `${people}${live({ label: "Drafting the agenda: attendees' open items and where each stands", ...(st.progress || {}) })}`;
+  if (st.phase === "debrief") return `${people}${live({ label: "Reading the meeting notes and proposing updates", ...(st.progress || {}) })}${st.agenda ? `<details class="hood"><summary>Agenda</summary>${mtgAgenda(st, false)}</details>` : ""}`;
+  if (st.phase?.endsWith("_failed")) return `${people}<div class="inote bad">${esc(st.error)}</div><div style="display:flex;gap:8px"><button class="btn sm" data-mtg-retry="${esc(st.id)}">${icon("undo")}Retry</button>${item}</div>${st.agenda ? `<details class="hood"><summary>Agenda</summary>${mtgAgenda(st, false)}</details>` : ""}`;
+  if (st.phase === "updates") return `${people}<div style="display:flex;gap:8px;align-items:center"><span class="tag ok">Notes read</span>${st.open_steps ? `<span>${st.open_steps} to apply</span>` : `<span class="muted">${st.steps?.length ? "Everything applied" : "Nothing to update"}</span>`}</div>
+    ${(st.steps || []).map(x => mtgStep(st.id, x)).join("")}${rep("s3")}<details class="hood"><summary>Agenda</summary>${mtgAgenda(st, false)}</details>`;
+  return `${people}<div style="display:flex;gap:8px;align-items:center"><span class="grow" style="flex:1"></span>${item}<button class="btn ghost sm" data-mtg-redraft="${esc(st.id)}" title="Draft the agenda again from the latest sources; your notes stay">${icon("undo")}Redraft agenda</button><button class="btn sm" data-mtg-done="${esc(st.id)}" title="Reads the meeting notes and proposes updates to every item">${icon("check")}Meeting done: update items</button></div><details class="hood agenda" ${state.mtg.agendaOpen ? "open" : ""} data-agenda-fold><summary>Agenda${state.mtg.agendas[st.id]?.rows?.length ? ` · ${state.mtg.agendas[st.id].rows.length} items` : ""}</summary>${mtgAgenda(st, true)}</details>}`;
+}
+// The agenda: one list in importance order across attendees, one short line each with its owner; click a line for
+// why it matters, the ask, the detail and the source. Notes typed during the call attach to the line (or the whole
+// meeting) and the debrief treats them as authoritative.
+function mtgAgenda(st, editable) {
+  const a = state.mtg.agendas[st.id];
+  if (a === undefined) { state.mtg.agendas[st.id] = null; fetch("/api/meetings/agenda/" + st.id).then(r => r.json()).then(j => { state.mtg.agendas[st.id] = j; renderMeetings(); }); }
+  if (!a) return `<div class="muted">Loading…</div>`;
+  if (!a.rows.length) { const t = state.mtg.reports[st.id + "/s1"]; if (t === undefined) mtgReport(st.id, "s1"); return t ? `<div class="md mtg-rep">${md(t)}</div>` : `<div class="muted">No agenda yet.</div>`; }
+  const box = (n, ph) => { const k = `${st.id}|${n ?? "all"}`; return editable ? `<div class="ag-note"><textarea rows="2" data-ag-draft="${esc(k)}" placeholder="${ph}">${esc(state.mtg.drafts[k] || "")}</textarea><button class="btn sm" data-ag-save="${esc(k)}">Add <kbd>↵</kbd></button></div>` : ""; };
+  const notes = xs => xs.length ? `<ul class="ag-notes">${xs.map(x => `<li>${esc(x.text)} <span class="muted">${esc(fmtTs(x.ts).split(", ").pop())}</span></li>`).join("")}</ul>` : "";
+  const row = (x, i) => {
+    const k = `${st.id}|${x.n}`, open = state.mtg.exp.has(k), who = (x.owner || "").split(" ")[0];
+    return `<div class="ag ${open ? "open" : ""}"><button class="ag-head" data-ag="${esc(k)}">${i != null ? `<span class="ag-rank">${i + 1}</span>` : ""}<span class="ag-title">${esc(x.headline || firstSentence(x.topic, 80))}</span>${x.notes.length ? `<span class="tag">${x.notes.length} note${x.notes.length === 1 ? "" : "s"}</span>` : ""}<span class="ag-owner">${esc(who)}</span></button>
+      <div class="ag-sub">${esc(x.status || firstSentence(x.last_known, 110))}</div>
+      ${open ? `<div class="ag-more">${x.why ? `<div><span class="lbl">Why now</span> ${esc(x.why)}</div>` : ""}${x.ask ? `<div><span class="lbl">Ask</span> ${esc(x.ask)}</div>` : ""}${x.detail || (x.last_known && !x.status ? "" : x.last_known) ? `<div class="soft">${esc(x.detail || x.last_known)}</div>` : ""}
+        <div class="muted" style="font-size:12px">${esc(x.owner || "")}${x.source_url ? ` · <a href="${safeUrl(x.source_url)}" target="_blank">Source${x.last_known_date ? ", " + esc(x.last_known_date.slice(5)) : ""}</a>` : ""}</div>${notes(x.notes)}${box(x.n, "Color on this item. Enter adds it")}</div>` : ""}</div>`;
+  };
+  const main = a.rows.filter(x => !x.later), later = a.rows.filter(x => x.later);
+  return `<div class="agenda">${main.map(row).join("")}
+    ${later.length ? `<details class="hood"><summary>Also open, not for today (${later.length})</summary>${later.map(x => row(x, null)).join("")}</details>` : ""}
+    ${editable || a.general.length ? `<div class="ag-general"><div class="lbl">Notes and color</div>${notes(a.general)}${box(null, "What someone said, nuance the recording may miss. Enter adds it; keep adding as the call goes")}</div>` : ""}</div>`;
+}
+async function mtgSaveNote(k) {
+  const [item_id, n] = k.split("|"), text = (state.mtg.drafts[k] || "").trim(); if (!text) return;
+  const j = await mtgPost("note", { item_id, n: n === "all" ? null : +n, text });
+  // The box stays open and keeps focus: notes come in all through the call.
+  if (j) { state.mtg.agendas[item_id] = j; delete state.mtg.drafts[k]; state.mtg.focus = k; await renderMeetings(); }
+}
+// One apply step from the debrief: what it changes, and its action button (the same step actions as the queue).
+function mtgPreview(x) {
+  if (x.kind === "queue_update") { try { return `<ul>${JSON.parse(x.draft).map(o => `<li><b>${esc(o.op === "create" ? "New item" : o.op.replace("_", " "))}</b> ${esc(o.op === "create" ? o.item?.title || "" : o.item_id || "")}${o.why ? ` · ${esc(o.why)}` : ""}${o.quote ? `<div class="quote">“${esc(o.quote)}”</div>` : ""}</li>`).join("")}</ul>`; } catch { return `<pre>${esc(x.draft)}</pre>`; } }
+  return `<pre style="white-space:pre-wrap">${esc(x.draft)}</pre>`;
+}
+function mtgStep(id, x) {
+  const k = `${id}|${x.id}`, done = ["done", "skipped"].includes(x.status);
+  return `<div class="mtg-step"><div style="display:flex;gap:8px;align-items:center"><span style="flex:1">${esc(x.text)}${x.target ? ` <span class="muted">· ${esc(x.target)}</span>` : ""}</span>
+    ${done ? `<span class="tag ${x.status === "done" ? "ok" : ""}">${x.status === "done" ? "Done" : "Skipped"}</span>` : x.status === "queued" ? `<span class="dots"><i></i><i></i><i></i></span><span class="muted">Running</span>`
+      : `<button class="btn ghost sm" data-mtg-skip="${esc(k)}">Skip</button><button class="btn primary sm" data-mtg-step="${esc(k)}">${icon(x.kind === "none" ? "check" : "send")}${esc(VERB[x.kind] || "Mark done")}</button>`}</div>
+    ${x.error && !done ? `<div class="inote bad">${esc(x.error)}</div>` : ""}${done && x.result ? `<div class="muted" style="font-size:12px">${esc(x.result)}</div>` : ""}
+    ${x.draft && !done ? `<details class="hood"><summary>What it changes</summary>${mtgPreview(x)}</details>` : ""}</div>`;
+}
+async function mtgStepAct(k, action) {
+  const [id, step_id] = k.split("|"), post = body => fetch(`/api/items/${id}/action`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, step_id, ...body }) });
+  let r = await post({}), j = await r.json();
+  if (r.status === 409 && j.checks?.length) {
+    const why = prompt(`Check failed: ${j.error}\n\nDo it anyway? Say why.`); if (!why) return;
+    r = await post({ override: true, note: why }); j = await r.json();
+  }
+  if (!r.ok) toast(esc(j.error || "Didn't work"), true);
+  renderMeetings();
+}
+// Minutes after midnight, ET, for an ISO time.
+const etMin = iso => { const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "numeric", hourCycle: "h23" }).formatToParts(new Date(iso)).map(x => [x.type, x.value])); return (+p.hour) * 60 + (+p.minute); };
+const hourLabel = h => h === 0 ? "12 AM" : h < 12 ? `${h} AM` : h === 12 ? "12 PM" : `${h - 12} PM`;
+// Side-by-side columns for overlapping events in one day (Google Calendar style).
+function layoutDay(evs) {
+  const xs = evs.map(ev => ({ ev, s: etMin(ev.start), e: ev.end ? etMin(ev.end) : etMin(ev.start) + 30 })).sort((x, y) => x.s - y.s || y.e - x.e);
+  let group = [], end = -1; const out = [];
+  const flush = () => { const cols = []; group.forEach(x => { let c = cols.findIndex(t => t <= x.s); if (c < 0) { c = cols.length; cols.push(0); } cols[c] = x.e; x.col = c; }); group.forEach(x => { x.n = cols.length; out.push(x); }); group = []; };
+  xs.forEach(x => { if (x.s >= end && group.length) flush(); group.push(x); end = Math.max(end, x.e); });
+  if (group.length) flush();
+  return out;
+}
+async function renderMeetings() {
+  const week = weekOf(), r = await (await fetch("/api/meetings?week=" + week)).json(); state.mtg.data = r;
+  if (state.view !== "meetings") return;
+  const today = ymd(etNow()), M = state.mtg;
+  const tag = st => !st ? "" : st.phase === "prep" || st.phase === "debrief" ? `<span class="dots"><i></i><i></i><i></i></span>` : st.phase?.endsWith("_failed") ? `<span class="tag bad">Stopped</span>` : st.phase === "updates" ? `<span class="tag ok">Updated</span>` : st.item_id ? `<span class="tag">Agenda ready</span>` : "";
+  const days = r.days.filter((d, k) => k < 5 || d.events.length);  // weekends only when they have meetings
+  const all = days.flatMap(d => d.events.filter(e => e.start));
+  const H0 = Math.max(0, Math.min(8, ...all.map(e => Math.floor(etMin(e.start) / 60)))), H1 = Math.min(24, Math.max(18, ...all.map(e => Math.ceil((e.end ? etMin(e.end) : etMin(e.start) + 30) / 60))));
+  const PX = 56, hours = Array.from({ length: H1 - H0 }, (_, k) => H0 + k);
+  const openId = [...M.open].pop(), openEv = all.find(e => e.id === openId);
+  const nowMin = etMin(new Date().toISOString());
+  const keep = $("calbody")?.scrollTop;
+  const wk = new Date(week + "T12:00:00"), wkEnd = new Date(wk); wkEnd.setDate(wk.getDate() + 6);
+  const range = `${wk.toLocaleDateString("en-US", { month: "short", day: "numeric" })} to ${wkEnd.toLocaleDateString("en-US", wk.getMonth() === wkEnd.getMonth() ? { day: "numeric" } : { month: "short", day: "numeric" })}`;
+  $("detail").innerHTML = `<div class="cal ${openEv ? "with-panel" : ""}">
+    <div class="calbar">
+      <div class="h">Meetings</div>
+      <div class="calnav"><button class="btn sm" data-mtg-today ${M.off === 0 ? "disabled" : ""}>Today</button><button class="iconbtn" data-mtg-week="-1" title="Previous week">${icon("left")}</button><button class="iconbtn" data-mtg-week="1" title="Next week">${icon("right")}</button><span class="calrange">${esc(range)}</span></div>
+      <span class="grow"></span>
+      <span class="muted" style="font-size:12px">${r.fetching ? `<span class="dots"><i></i><i></i><i></i></span> Reading your calendar` : r.fetched_at ? `Loaded ${esc(fmtTs(r.fetched_at))}` : "Not loaded yet"}</span>
+      <button class="btn sm" data-mtg-refresh ${r.fetching ? "disabled" : ""}>${r.fetched_at ? "Reload" : "Load week"}</button>
+    </div>
+    ${r.error ? `<div class="inote bad" style="margin:0 24px">${esc(r.error)}</div>` : ""}
+    <div class="calwrap">
+      <div class="calgrid" style="--days:${days.length}">
+        <div class="calhead"><div class="gutter"></div>${days.map(d => { const dt = new Date(d.date + "T12:00:00"); return `<div class="dayhead ${d.date === today ? "today" : ""} ${d.date < today ? "past" : ""}"><span class="dow">${dt.toLocaleDateString("en-US", { weekday: "short" })}</span><span class="dnum">${dt.getDate()}</span></div>`; }).join("")}</div>
+        <div class="calbody" id="calbody"><div class="calinner" style="height:${hours.length * PX}px">
+          <div class="gutter">${hours.map((h, k) => `<div class="hl" style="top:${k * PX}px">${k ? hourLabel(h) : ""}</div>`).join("")}</div>
+          ${days.map(d => `<div class="daycol ${d.date === today ? "today" : ""} ${d.date < today ? "past" : ""}">
+            ${hours.map((h, k) => `<div class="hline" style="top:${k * PX}px"></div>`).join("")}
+            ${layoutDay(d.events.filter(e => e.start)).map(x => { const top = (x.s - H0 * 60) / 60 * PX, ht = Math.max(22, (x.e - x.s) / 60 * PX - 2), ev = x.ev, past = d.date < today || (d.date === today && x.e < nowMin);
+              return `<button class="ev ${past ? "past" : ""} ${ev.id === openId ? "on" : ""} ${ev.state?.item_id ? "prepped" : ""}" data-mtg-toggle="${esc(ev.id)}" title="${esc(ev.title || "")}" style="top:${top}px;height:${ht}px;left:calc(${x.col} * 100% / ${x.n} + 2px);width:calc(100% / ${x.n} - 5px)">
+                <span class="et">${esc(ev.title || "(no title)")}</span>${ht > 36 ? `<span class="em">${esc(hm(ev.start))}${ev.attendees?.length ? ` · ${ev.attendees.length + 1}` : ""}</span>` : ""}${ev.state?.item_id && ht > 52 ? `<span class="em">${tag(ev.state)}</span>` : ""}</button>`; }).join("")}
+            ${d.date === today && nowMin >= H0 * 60 && nowMin <= H1 * 60 ? `<div class="nowline" style="top:${(nowMin - H0 * 60) / 60 * PX}px"></div>` : ""}
+          </div>`).join("")}
+        </div></div>
+      </div>
+      ${openEv ? `<aside class="mtg-panel"><div class="mp-head"><div><div class="mp-t">${esc(openEv.title || "(no title)")}</div>
+          <div class="mp-s">${esc(dayLabel(days.find(d => d.events.includes(openEv))?.date || ""))} · ${esc(hm(openEv.start))}${openEv.end ? " to " + esc(hm(openEv.end)) : ""} · ${(openEv.attendees?.length || 0) + 1} people ${tag(openEv.state)}</div></div>
+          <button class="iconbtn" data-mtg-toggle="${esc(openEv.id)}" title="Close">${icon("x")}</button></div>
+        <div class="mp-body">${mtgInfo(openEv)}${mtgBody(openEv)}</div></aside>` : ""}
+    </div>
+    ${!all.length ? `<div class="empty"><div class="h">${r.fetched_at ? "No meetings with other people this week" : "Load this week"}</div><div>${r.fetched_at ? "" : "Reads the week's meetings from Google Calendar (read only)."}</div></div>` : ""}
+  </div>`;
+  const body = $("calbody");
+  if (body) body.scrollTop = keep ?? Math.max(0, ((M.off === 0 ? nowMin - 90 : 8 * 60) - H0 * 60) / 60 * PX);
+  if (state.mtg.focus) { document.querySelector(`[data-ag-draft="${CSS.escape(state.mtg.focus)}"]`)?.focus(); state.mtg.focus = null; }
+}
+setInterval(() => { const d = state.mtg.data; if (state.view === "meetings" && !isText() && (d?.fetching || d?.days.some(x => x.events.some(e => ["prep", "debrief"].includes(e.state?.phase) || e.state?.steps?.some(y => y.status === "queued"))))) renderMeetings(); }, 3000);
+document.addEventListener("input", e => { if (e.target.dataset?.agDraft) state.mtg.drafts[e.target.dataset.agDraft] = e.target.value; });
+document.addEventListener("keydown", e => { if (e.target.dataset?.agDraft && e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); mtgSaveNote(e.target.dataset.agDraft); } });
+const mtgPost = async (a, body) => { const r = await fetch("/api/meetings/" + a, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); const j = await r.json(); if (!r.ok) toast(esc(j.error || "Didn't work"), true); return r.ok ? j : null; };
+document.addEventListener("click", async e => {
+  if (state.view !== "meetings") return;
+  const q = s => e.target.closest(s); let el;
+  if ((el = q("[data-mtg-week]"))) { state.mtg.off += +el.dataset.mtgWeek; return renderMeetings(); }
+  if ((el = q("[data-mtg-toggle]"))) { const id = el.dataset.mtgToggle; state.mtg.open = state.mtg.open.has(id) ? new Set() : new Set([id]); return renderMeetings(); }
+  if (q("[data-mtg-today]")) { state.mtg.off = 0; return renderMeetings(); }
+  if (state.mtg.open.size && q(".calgrid") && !q(".ev")) { state.mtg.open = new Set(); return renderMeetings(); }
+  if ((el = q("[data-agenda-fold] > summary"))) { e.preventDefault(); state.mtg.agendaOpen = !state.mtg.agendaOpen; return renderMeetings(); }
+  if ((el = q("[data-notes-more]"))) { state.mtg.notesOpen = el.dataset.notesMore; return renderMeetings(); }
+  if (q("[data-mtg-refresh]")) { await mtgPost("refresh", { date: weekOf() }); setTimeout(renderMeetings, 400); return; }
+  if ((el = q("[data-mtg-prep]"))) { el.disabled = true; if (await mtgPost("prep", { date: el.dataset.date, event_id: el.dataset.mtgPrep })) { load(); } return renderMeetings(); }
+  if ((el = q("[data-mtg-done]"))) { el.disabled = true; if (await mtgPost("done", { item_id: el.dataset.mtgDone })) { delete state.mtg.reports[el.dataset.mtgDone + "/s3"]; load(); } return renderMeetings(); }
+  if ((el = q("[data-mtg-retry]"))) { el.disabled = true; await mtgPost("retry", { item_id: el.dataset.mtgRetry }); return renderMeetings(); }
+  if ((el = q("[data-mtg-redraft]"))) { el.disabled = true; if (await mtgPost("redraft", { item_id: el.dataset.mtgRedraft })) { delete state.mtg.agendas[el.dataset.mtgRedraft]; delete state.mtg.reports[el.dataset.mtgRedraft + "/s1"]; } return renderMeetings(); }
+  if ((el = q("[data-ag]"))) { const k = el.dataset.ag; state.mtg.exp.has(k) ? state.mtg.exp.delete(k) : state.mtg.exp.add(k); return renderMeetings(); }
+  if ((el = q("[data-ag-save]"))) { el.disabled = true; return mtgSaveNote(el.dataset.agSave); }
+  if ((el = q("[data-mtg-step]"))) { el.disabled = true; return mtgStepAct(el.dataset.mtgStep, "do_step"); }
+  if ((el = q("[data-mtg-skip]"))) { el.disabled = true; return mtgStepAct(el.dataset.mtgSkip, "skip_step"); }
+});
+
+/* ---------- events ---------- */
+document.addEventListener("click", e => {
+  const t = e.target, q = s => t.closest(s); let el;
+  if (!q("#menu") && !q("[data-menu]")) closeMenu();
+  if ((el = q("[data-report]"))) { e.preventDefault(); return openReport(el.dataset.report); }
+  if (q("[data-close-report]") || t.id === "report") return $("report").classList.remove("show");
+  if (t.id === "pal") return closePalette();
+  if ((el = q("[data-pal]"))) return runPalette(+el.dataset.pal);
+  if ((el = q("[data-menu]"))) { if ($("menu").classList.contains("show") && $("menu")._anchor === el) return closeMenu(); return openMenu(el.dataset.menu, el); }
+  if ((el = q("[data-mact]")) && el.dataset.mact.startsWith("filter:type:")) { closeMenu(); state.type = el.dataset.mact.slice(12); state.sel = 0; renderList(); renderDetail(); return renderDrawer(); }
+  if ((el = q("[data-mact]"))) { closeMenu(); const [k, a] = el.dataset.mact.split(":"); return k === "step" ? stepAct(a) : itemAct(a); }
+  if ((el = q("[data-vote]"))) return vote(el.dataset.vote);
+  if (q("[data-show-done]")) { state.showDone = !state.showDone; return renderDetail(); }
+  if (q("[data-chat-open]")) { const dr = $("drawer"); delete dr.dataset.sig; return openChat("ask"); }
+  if (q("[data-chat-close]")) return setChat(false);
+  if ((el = q("[data-apply]"))) return applyDraft(+el.dataset.apply, el.dataset.step);
+  if ((el = q("[data-mode]"))) { state.mode = el.dataset.mode; const dr = $("drawer"); delete dr.dataset.sig; delete dr.dataset.talkFor; if (state.mode === "talk") { state.talk = null; loadTalk(); } renderDrawer(); return $("compose")?.focus(); }
+  if ((el = q("[data-talk-steps]"))) { state.talkShowSteps = !state.talkShowSteps; return renderDrawer(); }
+  if (q("[data-compose]")) return submitCompose();
+  if (q("[data-expand]")) return toggleExpand();
+  if (q("[data-palette]")) return openPalette();
+  if (q("[data-theme-toggle]")) return toggleTheme();
+  if ((el = q("[data-step-act]"))) return stepAct(el.dataset.stepAct);
+  if ((el = q("[data-n]"))) { state.sel = +el.dataset.n; renderList(); renderDetail(); return renderDrawer(); }
+  if ((el = q("[data-view]"))) return setView(el.dataset.view);
+  if ((el = q("[data-type]"))) { state.type = el.dataset.type; state.sel = 0; renderList(); renderDetail(); return renderDrawer(); }
+  if ((el = q("[data-syn-more]"))) { el.previousElementSibling.querySelectorAll("li[hidden]").forEach(li => li.hidden = false); return el.remove(); }
+  if ((el = q("[data-syn]"))) { state.synDate = el.dataset.syn; return renderSynopsis(el.dataset.syn); }
+});
+$("pal-in").addEventListener("input", () => { palSel = 0; renderPalette(); });
+$("pal-in").addEventListener("keydown", e => {
+  if (e.key === "ArrowDown") { palSel = Math.min(palCmds.length - 1, palSel + 1); renderPalette(); e.preventDefault(); }
+  else if (e.key === "ArrowUp") { palSel = Math.max(0, palSel - 1); renderPalette(); e.preventDefault(); }
+  else if (e.key === "Enter") { runPalette(palSel); e.preventDefault(); }
+  else if (e.key === "Escape") { closePalette(); e.preventDefault(); }
+});
+document.addEventListener("keydown", e => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); return $("pal").classList.contains("show") ? closePalette() : openPalette(); }
+  if ($("ask").classList.contains("show") || $("pal").classList.contains("show") || $("fbx").classList.contains("show")) return;
+  if (e.key === "Escape") {
+    if ($("menu").classList.contains("show")) return closeMenu();
+    if ($("report").classList.contains("show")) return $("report").classList.remove("show");
+    if (state.chat) { document.activeElement?.blur(); return setChat(false); }
+    return document.activeElement?.blur();
+  }
+  if (document.activeElement?.id === "compose" && e.key === "Enter" && !e.shiftKey) { e.preventDefault(); return submitCompose(state.mode === "note" && e.metaKey); }
+  if (isText() || e.metaKey || e.ctrlKey || e.altKey) return;
+  const s = current() && curStep(current());
+  const map = {
+    j: () => move(1), k: () => move(-1), ArrowDown: () => move(1), ArrowUp: () => move(-1),
+    a: () => stepAct("do_step"), v: () => stepAct("revise_step"), h: () => stepAct("agent_step"), x: () => stepAct("step_done_elsewhere"), z: () => stepAct("skip_step"),
+    t: () => s && isAgent(s.owner) && s.status === "failed" && stepAct("take_back"),
+    n: () => s && !isOwner(s.owner) && !isAgent(s.owner) && stepAct("nudge"),
+    X: () => itemAct("done_elsewhere"), w: () => itemAct("waiting"), s: () => itemAct("snooze"), d: () => itemAct("delegate"), r: () => itemAct("dismiss"), u: () => itemAct("reopen"),
+    c: () => state.chat && state.mode === "ask" ? setChat(false) : openChat("ask"), i: () => openChat("note"), e: () => $("draft")?.focus(), m: toggleExpand,
+    g: runLeads, "\\": toggleTheme, "?": openPalette, "/": openPalette,
+  };
+  if (/^[1-8]$/.test(e.key)) { setView(VIEWS[+e.key - 1][0]); e.preventDefault(); return; }
+  if (map[e.key]) { map[e.key](); e.preventDefault(); }
+});
+
+// Deep links from notifications: #item=<id> opens that item; #queue or #waiting opens the list.
+function openHash() {
+  const h = decodeURIComponent(location.hash.slice(1)); if (!h) return;
+  const it = h.startsWith("item=") && state.items.find(i => i.id === h.slice(5));
+  if (it) jumpTo(it); else if (VIEWS.some(v => v[0] === h)) setView(h);
+  history.replaceState(null, "", location.pathname);
+}
+window.addEventListener("hashchange", openHash);
+load().then(openHash); loadMeta();
+const awake = () => document.visibilityState === "visible";
+setInterval(() => { if (awake()) loadMeta(); }, 10000);
+setInterval(() => { if (awake() && !$("pal").classList.contains("show") && !$("ask").classList.contains("show") && LISTS.includes(state.view)) load(); }, 8000);
+setInterval(() => { if (awake() && LISTS.includes(state.view) && state.items.some(i => i.chat_pending)) load(); }, 3000);
+document.addEventListener("visibilitychange", () => { if (awake()) { loadMeta(); if (LISTS.includes(state.view)) load(); } });
+
+/* ---------- tooltips: app-styled and quick ---------- */
+// Native title tooltips wait about a second and look like the OS. Move each title into data-tip on first hover and
+// show ours after 150ms; hide on leave, click, key or scroll.
+(() => {
+  const tip = document.createElement("div"); tip.id = "tip"; document.body.appendChild(tip);
+  let timer = null, cur = null;
+  const hide = () => { clearTimeout(timer); timer = null; cur = null; tip.classList.remove("show"); };
+  const place = el => {
+    const r = el.getBoundingClientRect(); tip.style.left = "0px"; tip.style.top = "0px";
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    let top = r.top - h - 8; if (top < 6) top = r.bottom + 8;
+    const left = Math.max(6, Math.min(innerWidth - w - 6, r.left + r.width / 2 - w / 2));
+    tip.style.left = left + "px"; tip.style.top = top + "px";
+  };
+  document.addEventListener("pointerover", e => {
+    let el = e.target.closest?.("[title], [data-tip]");
+    const kb = e.target.closest?.(".btn");
+    if (kb && !el && kb.querySelector("kbd")) {  // a button whose key hint is hidden: show "Label (key)" on hover
+      const k = kb.querySelector("kbd").textContent.trim(), label = kb.textContent.replace(k, "").replace(/\s+/g, " ").trim();
+      kb.dataset.tip = `${label} (${k})`; el = kb;
+    }
+    if (!el || el === cur) return;
+    if (el.hasAttribute("title")) { const t = el.getAttribute("title"); el.removeAttribute("title"); if (t) el.dataset.tip = t; }
+    const text = el.dataset.tip; if (!text) return;
+    hide(); cur = el;
+    timer = setTimeout(() => { if (cur !== el || !el.isConnected) return; tip.textContent = text; place(el); tip.classList.add("show"); }, 150);
+  });
+  document.addEventListener("pointerout", e => { if (cur && !cur.contains(e.relatedTarget)) hide(); });
+  ["pointerdown", "keydown", "scroll", "blur"].forEach(ev => addEventListener(ev, hide, true));
+})();
+// The composer grows with what you type, up to 200px.
+document.addEventListener("input", e => { if (e.target.id === "compose") { e.target.style.height = "auto"; e.target.style.height = Math.min(200, e.target.scrollHeight) + "px"; } });
+
+/* ---------- connectors: what the brain reads ---------- */
+// The catalog (curated popularity order), what this brain reads (config/connectors.json) and each connector's live
+// state. Add puts a connector into every lead, sync and agent run; a small run then finds its read-only tools.
+state.conn = { q: "", data: null };
+async function renderConnectors() {
+  const r = await (await fetch("/api/connectors")).json(); state.conn.data = r;
+  if (state.view !== "connectors") return;
+  const C = state.conn, q = C.q.trim().toLowerCase();
+  const STATE = { connected: ["ok", "Connected"], needs_auth: ["warn", "Needs sign-in"], failed: ["bad", "Failed"], not_connected: ["mute", "Not connected"] };
+  const mine = r.connectors.filter(c => c.added);
+  const rows = r.connectors.filter(c => !q || [c.name, c.category, c.about].join(" ").toLowerCase().includes(q));
+  const chip = c => { const [k] = STATE[c.state] || STATE.not_connected; return `<span class="cchip" title="${esc(c.state === "connected" ? `${c.tools} read tools` : (STATE[c.state] || STATE.not_connected)[1])}"><span class="rd ${k}"></span>${esc(c.name)}${c.discovery === "pending" ? ' <span class="dots"><i></i><i></i><i></i></span>' : ""}</span>`; };
+  const action = c => {
+    if (!c.added) return `<button class="btn sm" data-conn-add="${esc(c.name)}">${icon("plug")}Add</button>`;
+    if (c.discovery === "pending") return `<span class="muted cact">Finding read tools…</span>`;
+    if (c.discovery === "failed" || (c.added && !c.tools)) return `<button class="btn sm" data-conn-retry="${esc(c.name)}" title="${c.state !== "connected" ? "Connect it first, then retry" : "Find its read tools again"}">Retry</button>`;
+    return `<span class="cact ok">${icon("check")}Added · ${c.tools} tools</span>`;
+  };
+  const scroll = $("detail").scrollTop, hadFocus = document.activeElement?.id === "conn-q";
+  $("detail").innerHTML = `<div class="page conn">
+    <div class="h">Connectors</div>
+    <div class="soft">What your brain reads. Adding a connector brings it into every lead, sync and agent run, read only: a short run finds its read tools, and write tools are never allowed. Sign-in happens at claude.ai.</div>
+    <div class="cmine"><span class="mp-k">In your brain (${mine.length})</span><div class="cchips">${mine.map(chip).join("") || '<span class="muted">None yet</span>'}</div></div>
+    <div class="cbar"><input class="text" id="conn-q" placeholder="Search connectors" value="${esc(C.q)}"><button class="btn sm" data-conn-refresh ${r.checking ? "disabled" : ""}>${r.checking ? "Checking…" : "Check status"}</button></div>
+    <div class="clist">${rows.map(c => { const [k, l] = STATE[c.state] || STATE.not_connected; return `<div class="crow ${c.added ? "on" : ""}">
+      <span class="clogo">${esc(c.name[0])}</span>
+      <div class="cmain"><div class="cname">${esc(c.name)}<span class="ccat">${esc(c.category || "")}</span></div><div class="cabout">${esc(c.about || c.use || "")}</div></div>
+      <span class="cstate"><span class="rd ${k}"></span>${l}</span>
+      ${c.state !== "connected" ? `<a class="btn ghost sm" href="${safeUrl(r.connect_url)}" target="_blank" rel="noopener" title="Sign in to ${esc(c.name)} at claude.ai">Connect</a>` : ""}
+      ${action(c)}</div>`; }).join("") || '<div class="muted">No connector matches.</div>'}</div>
+    <div class="muted" style="font-size:12px">Order is an estimate of how widely Claude users connect each one. ${r.checked_at ? "Status checked " + esc(fmtTs(r.checked_at)) + "." : ""}</div>
+  </div>`;
+  $("detail").scrollTop = scroll;
+  if (hadFocus) { const i = $("conn-q"); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
+}
+const connPost = async (a, body) => { const r = await fetch("/api/connectors/" + a, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); const j = await r.json().catch(() => ({})); if (!r.ok) toast(esc(j.error || "Didn't work"), true); return r.ok; };
+const connFind = n => state.conn.data?.connectors.find(c => c.name === n);
+document.addEventListener("input", e => { if (e.target.id === "conn-q") { state.conn.q = e.target.value; renderConnectors(); } });
+document.addEventListener("click", async e => {
+  if (state.view !== "connectors") return;
+  const q = s => e.target.closest(s); let el;
+  if ((el = q("[data-conn-add]"))) { const c = connFind(el.dataset.connAdd); el.disabled = true; if (await connPost("add", { name: c.name, server: c.server, use: c.use })) toast(icon("plug") + `${esc(c.name)} added; finding its read tools`); return renderConnectors(); }
+  if ((el = q("[data-conn-retry]"))) { const c = connFind(el.dataset.connRetry); await connPost("retry", { name: c.name, server: c.server }); return renderConnectors(); }
+  if (q("[data-conn-refresh]")) { await connPost("refresh", { server: "all" }); return setTimeout(renderConnectors, 300); }
+});
+setInterval(() => { const d = state.conn.data; if (state.view === "connectors" && document.visibilityState === "visible" && d && (d.checking || d.connectors.some(c => c.discovery === "pending"))) renderConnectors(); }, 3000);
+</script>
+</body>
+</html>
