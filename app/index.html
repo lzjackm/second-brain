@@ -611,6 +611,15 @@ kbd { font: 500 11px/16px var(--font); color: var(--ink-3); background: var(--fi
 .cstate { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-2); min-width: 110px; }
 .cact { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; min-width: 120px; justify-content: flex-end; } .cact.ok { color: var(--ok); }
 .rd.mute { background: var(--ink-4); }
+.claude { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-md, 10px); }
+.claude .cmain .cabout { white-space: normal; } .claude code { font-family: var(--mono, ui-monospace, monospace); font-size: 12px; background: var(--field); padding: 1px 6px; border-radius: 4px; }
+.cset { font-size: 12px; color: var(--ink-3); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 2px; }
+.cset .chip.warn { cursor: pointer; }
+#csheet .dialog { width: 600px; max-height: 80vh; overflow: auto; }
+.cs-row { display: flex; flex-direction: column; gap: 6px; } .cs-k { font-size: 12px; font-weight: 600; color: var(--ink-2); } .cs-help { font-size: 12px; color: var(--ink-3); }
+.cs-areas { display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px; } .cs-areas label, .cs-req { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; }
+.cs-test { border-top: 1px solid var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+.cs-test ol { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; } .cs-test .why { color: var(--ink-3); font-size: 12px; }
 @media (prefers-reduced-motion: reduce) { #drawer { transition: none; } }
 </style>
 </head>
@@ -621,6 +630,7 @@ kbd { font: 500 11px/16px var(--font); color: var(--ink-3); background: var(--fi
 <div class="overlay" id="pal"><div class="palette"><input id="pal-in" placeholder="Type a command or search items" autocomplete="off"><div class="plist" id="pal-list"></div></div></div>
 <div class="overlay" id="ask"><div class="dialog"><div class="h" id="ask-title"></div><div class="soft" id="ask-sub"></div><div id="ask-field"></div>
   <div class="actions"><button class="btn ghost" data-ask="cancel">Cancel <kbd>esc</kbd></button><button class="btn primary" data-ask="ok">Save <kbd>⌘↵</kbd></button></div></div></div>
+<div class="overlay" id="csheet"><div class="dialog" id="csheet-body"></div></div>
 <div class="overlay" id="fbx"><div class="dialog"><div class="h">Feedback on this work</div>
   <div class="soft">Goes to the job that did it. The nightly learning run turns it into rules.</div>
   <div class="bar"><button class="iconbtn rate up" data-fbx-rate="up" title="Good">${""}</button><button class="iconbtn rate down" data-fbx-rate="down" title="Not good"></button></div>
@@ -1974,7 +1984,7 @@ document.addEventListener("input", e => { if (e.target.id === "compose") { e.tar
 /* ---------- connectors: what the brain reads ---------- */
 // The catalog (curated popularity order), what this brain reads (config/connectors.json) and each connector's live
 // state. Add puts a connector into every lead, sync and agent run; a small run then finds its read-only tools.
-state.conn = { q: "", data: null };
+state.conn = { q: "", data: null, open: null, draft: null };
 async function renderConnectors() {
   const r = await (await fetch("/api/connectors")).json(); state.conn.data = r;
   if (state.view !== "connectors") return;
@@ -1987,17 +1997,18 @@ async function renderConnectors() {
     if (!c.added) return `<button class="btn sm" data-conn-add="${esc(c.name)}">${icon("plug")}Add</button>`;
     if (c.discovery === "pending") return `<span class="muted cact">Finding read tools…</span>`;
     if (c.discovery === "failed" || (c.added && !c.tools)) return `<button class="btn sm" data-conn-retry="${esc(c.name)}" title="${c.state !== "connected" ? "Connect it first, then retry" : "Find its read tools again"}">Retry</button>`;
-    return `<span class="cact ok">${icon("check")}Added · ${c.tools} tools</span>`;
+    return `<button class="btn ghost sm" data-conn-set="${esc(c.name)}">${icon("pen")}Settings</button>`;
   };
   const scroll = $("detail").scrollTop, hadFocus = document.activeElement?.id === "conn-q";
   $("detail").innerHTML = `<div class="page conn">
     <div class="h">Connectors</div>
-    <div class="soft">What your brain reads. Adding a connector brings it into every lead, sync and agent run, read only: a short run finds its read tools, and write tools are never allowed. Sign-in happens at claude.ai.</div>
+    <div class="soft">What your brain reads, always read only. Watch connectors are read by lead runs for new work, each since it was last read; Lookup connectors only when an item needs them. Add one, set it up, and run a test read to see what it would bring in. Sign-in for each happens at claude.ai.</div>
+    ${claudeCard(r.claude)}
     <div class="cmine"><span class="mp-k">In your brain (${mine.length})</span><div class="cchips">${mine.map(chip).join("") || '<span class="muted">None yet</span>'}</div></div>
     <div class="cbar"><input class="text" id="conn-q" placeholder="Search connectors" value="${esc(C.q)}"><button class="btn sm" data-conn-refresh ${r.checking ? "disabled" : ""}>${r.checking ? "Checking…" : "Check status"}</button></div>
     <div class="clist">${rows.map(c => { const [k, l] = STATE[c.state] || STATE.not_connected; return `<div class="crow ${c.added ? "on" : ""}">
       <span class="clogo">${esc(c.name[0])}</span>
-      <div class="cmain"><div class="cname">${esc(c.name)}<span class="ccat">${esc(c.category || "")}</span></div><div class="cabout">${esc(c.about || c.use || "")}</div></div>
+      <div class="cmain"><div class="cname">${esc(c.name)}<span class="ccat">${esc(c.category || "")}</span></div><div class="cabout">${esc(c.about || c.use || "")}</div>${c.added ? connSummary(c) : ""}</div>
       <span class="cstate"><span class="rd ${k}"></span>${l}</span>
       ${c.state !== "connected" ? `<a class="btn ghost sm" href="${safeUrl(r.connect_url)}" target="_blank" rel="noopener" title="Sign in to ${esc(c.name)} at claude.ai">Connect</a>` : ""}
       ${action(c)}</div>`; }).join("") || '<div class="muted">No connector matches.</div>'}</div>
@@ -2006,17 +2017,73 @@ async function renderConnectors() {
   $("detail").scrollTop = scroll;
   if (hadFocus) { const i = $("conn-q"); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
 }
+const ROLE = { watch: ["Watch", "Lead runs read it for new work, each since it was last read."], lookup: ["Lookup", "Read only when an item, link or agent needs it. Cheapest."], off: ["Off", "Kept, but no run reads it."] };
+function claudeCard(cl) {
+  const head = `<span class="clogo">C</span>`;
+  if (!cl) return `<div class="claude">${head}<div class="cmain"><div class="cname">Claude</div><div class="cabout">Checking your Claude sign-in…</div></div></div>`;
+  if (!cl.installed) return `<div class="claude">${head}<div class="cmain"><div class="cname">Claude Code isn't installed</div><div class="cabout">The brain runs on your own Claude Code. Install it from claude.com/claude-code, sign in, then check again.</div></div><button class="btn sm" data-conn-refresh>Check again</button></div>`;
+  if (!cl.logged_in) return `<div class="claude">${head}<div class="cmain"><div class="cname">Claude isn't signed in <span class="chip warn">Runs paused</span></div><div class="cabout">Run <code>claude auth login</code> in Terminal and sign in with your Claude account (any paid plan) or an Anthropic Console account. Then check again.</div></div><button class="btn sm" data-conn-refresh>Check again</button></div>`;
+  const how = cl.method === "claude.ai" ? `${esc(cl.plan ? cl.plan[0].toUpperCase() + cl.plan.slice(1) : "Claude")} plan` : cl.provider && cl.provider !== "firstParty" ? esc(cl.provider) : "API key";
+  return `<div class="claude">${head}<div class="cmain"><div class="cname">Claude<span class="ccat">Claude Code ${esc(cl.version || "")}</span></div>
+    <div class="cabout">Runs use your sign-in: ${esc(cl.account || "")}${cl.org ? " · " + esc(cl.org) : ""} · ${how}. Your account and keys stay with Claude Code; nothing is stored in this brain.</div></div>
+    <span class="cstate"><span class="rd ok"></span>Signed in</span></div>`;
+}
+function connSummary(c) {
+  if (!c.role) return "";
+  const areas = c.areas?.length ? c.areas.join(", ") : "all areas", st = c.stats || {};
+  const bits = [ROLE[c.role][0] + (c.role === "watch" ? " · " + (c.cadence === "daily" ? "once a day" : "every run") : ""), areas,
+    st.items != null ? `${st.items} items, ${st.calls_per_day || 0} reads a day (7 days)` : ""].filter(Boolean);
+  return `<div class="cset">${bits.map(esc).join(" · ")}${c.suggest_lookup ? ` <span class="chip warn" data-conn-quiet="${esc(c.name)}" title="No items from it in 7 days">Quiet: switch to Lookup?</span>` : ""}</div>`;
+}
+function renderSheet() {
+  const C = state.conn, c = connFind(C.open), d = C.draft, areas = C.data?.areas || [];
+  if (!c || !d) { $("csheet").classList.remove("show"); return; }
+  const t = c.test, testing = (C.data?.testing || []).includes(c.server) || t?.status === "running";
+  $("csheet-body").innerHTML = `<div class="h">${esc(c.name)}</div>
+    <div class="cs-row"><span class="cs-k">Role</span><div class="seg">${Object.keys(ROLE).map(k => `<button data-cs-role="${k}" class="${d.role === k ? "on" : ""}">${ROLE[k][0]}</button>`).join("")}</div><span class="cs-help">${esc(ROLE[d.role][1])}</span></div>
+    <div class="cs-row"><span class="cs-k">${d.role === "watch" ? "What to watch" : "What it's for"}</span><textarea id="cs-use" rows="2">${esc(d.use)}</textarea><span class="cs-help">Plain words. Channels, folders or teams per area go in that area's lead spec.</span></div>
+    ${d.role === "watch" ? `<div class="cs-row"><span class="cs-k">How often</span><div class="seg"><button data-cs-cad="every" class="${d.cadence !== "daily" ? "on" : ""}">Every lead run</button><button data-cs-cad="daily" class="${d.cadence === "daily" ? "on" : ""}">Once a day</button></div><span class="cs-help">Lead runs follow your schedule, inside working hours. Each read covers everything since this connector was last read.</span></div>
+      <label class="cs-req"><input type="checkbox" id="cs-req" ${d.required ? "checked" : ""}> Wait for it to connect before a run starts</label>` : ""}
+    ${areas.length > 1 ? `<div class="cs-row"><span class="cs-k">Areas</span><div class="cs-areas">${areas.map(a => `<label><input type="checkbox" data-cs-area="${esc(a)}" ${!d.areas.length || d.areas.includes(a) ? "checked" : ""}> ${esc(a)}</label>`).join("")}</div></div>` : ""}
+    <div class="cs-test"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span class="cs-k">Test read</span>
+      <button class="btn sm" data-cs-test ${testing || !c.tools ? "disabled" : ""}>${testing ? "Reading…" : t ? "Run again" : "Run a test read"}</button></div>
+      <span class="cs-help">${c.tools ? "Reads the last 48 hours and shows what would become an item. Nothing is queued." : "Available once it has found its read tools."}</span>
+      ${t && t.status === "done" ? `<div>${esc(t.read || "")}</div>${t.items?.length ? `<ol>${t.items.map(x => `<li>${esc(x.title)}<div class="why">${esc(x.why || "")}${x.source ? " · " + esc(x.source) : ""}</div></li>`).join("")}</ol>` : `<div class="muted">Nothing would become an item.</div>`}${t.suggestion ? `<div class="cs-help">${esc(t.suggestion)}</div>` : ""}` : ""}</div>
+    <div class="actions"><button class="btn ghost" data-cs-remove>Remove</button><span style="flex:1"></span><button class="btn ghost" data-cs-cancel>Cancel</button><button class="btn primary" data-cs-save>Save</button></div>`;
+  $("csheet").classList.add("show");
+}
+function openSheet(name) {
+  const c = connFind(name); if (!c) return;
+  state.conn.open = name; state.conn.draft = { role: c.role || "watch", cadence: c.cadence || "every", areas: [...(c.areas || [])], required: !!c.required, use: c.use || "" };
+  renderSheet();
+}
+const closeSheet = () => { state.conn.open = state.conn.draft = null; $("csheet").classList.remove("show"); };
+$("csheet").addEventListener("click", async e => {
+  const C = state.conn, d = C.draft, c = connFind(C.open), q = s => e.target.closest(s); let el;
+  if (!d || !c) return;
+  if (e.target.id === "csheet" || q("[data-cs-cancel]")) return closeSheet();
+  d.use = $("cs-use")?.value ?? d.use; if ($("cs-req")) d.required = $("cs-req").checked;
+  if ((el = q("[data-cs-role]"))) { d.role = el.dataset.csRole; return renderSheet(); }
+  if ((el = q("[data-cs-cad]"))) { d.cadence = el.dataset.csCad; return renderSheet(); }
+  if (q("[data-cs-area]")) { const all = [...document.querySelectorAll("[data-cs-area]")]; d.areas = all.every(x => x.checked) ? [] : all.filter(x => x.checked).map(x => x.dataset.csArea); return; }
+  if (q("[data-cs-test]")) { const area = (d.areas[0] || CFG.default_area || C.data?.areas?.[0]); if (await connPost("test", { name: c.name, server: c.server, area })) { c.test = { status: "running" }; renderSheet(); } return; }
+  if (q("[data-cs-remove]")) { if (confirm(`Remove ${c.name} from your brain? Runs stop reading it.`) && await connPost("remove", { name: c.name, server: c.server })) { closeSheet(); renderConnectors(); } return; }
+  if (q("[data-cs-save]")) { if (await connPost("settings", { name: c.name, server: c.server, ...d, required: d.role === "watch" && d.required })) { toast(icon("check") + `${esc(c.name)} saved`); closeSheet(); renderConnectors(); } }
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape" && $("csheet").classList.contains("show")) { e.stopPropagation(); closeSheet(); } }, true);
 const connPost = async (a, body) => { const r = await fetch("/api/connectors/" + a, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); const j = await r.json().catch(() => ({})); if (!r.ok) toast(esc(j.error || "Didn't work"), true); return r.ok; };
 const connFind = n => state.conn.data?.connectors.find(c => c.name === n);
 document.addEventListener("input", e => { if (e.target.id === "conn-q") { state.conn.q = e.target.value; renderConnectors(); } });
 document.addEventListener("click", async e => {
   if (state.view !== "connectors") return;
   const q = s => e.target.closest(s); let el;
-  if ((el = q("[data-conn-add]"))) { const c = connFind(el.dataset.connAdd); el.disabled = true; if (await connPost("add", { name: c.name, server: c.server, use: c.use })) toast(icon("plug") + `${esc(c.name)} added; finding its read tools`); return renderConnectors(); }
+  if ((el = q("[data-conn-add]"))) { const c = connFind(el.dataset.connAdd); el.disabled = true; if (await connPost("add", { name: c.name, server: c.server, use: c.use })) { toast(icon("plug") + `${esc(c.name)} added; finding its read tools`); await renderConnectors(); openSheet(c.name); return; } return renderConnectors(); }
+  if ((el = q("[data-conn-set]"))) return openSheet(el.dataset.connSet);
+  if ((el = q("[data-conn-quiet]"))) { const c = connFind(el.dataset.connQuiet); if (await connPost("settings", { name: c.name, server: c.server, role: "lookup" })) { toast(icon("check") + `${esc(c.name)} is now Lookup`); renderConnectors(); } return; }
   if ((el = q("[data-conn-retry]"))) { const c = connFind(el.dataset.connRetry); await connPost("retry", { name: c.name, server: c.server }); return renderConnectors(); }
   if (q("[data-conn-refresh]")) { await connPost("refresh", { server: "all" }); return setTimeout(renderConnectors, 300); }
 });
-setInterval(() => { const d = state.conn.data; if (state.view === "connectors" && document.visibilityState === "visible" && d && (d.checking || d.connectors.some(c => c.discovery === "pending"))) renderConnectors(); }, 3000);
+setInterval(() => { const d = state.conn.data; if (state.view === "connectors" && document.visibilityState === "visible" && d && (d.checking || d.testing?.length || d.connectors.some(c => c.discovery === "pending" || c.test?.status === "running"))) renderConnectors().then(() => state.conn.open && renderSheet()); }, 3000);
 </script>
 </body>
 </html>

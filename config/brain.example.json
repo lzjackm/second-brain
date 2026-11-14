@@ -70,5 +70,8 @@
   "shadow_router": {
    "name": "Shadow router"
   }
+ },
+ "runs": {
+  "disabled_plugins": []
  }
 }

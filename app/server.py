@@ -264,7 +264,8 @@ def connectors_view(refresh=False):
         def run():
             connectors_view.busy = True
             try:
-                CONN_STATUS.write_text(json.dumps({"ts": now(), "live": connectors.status()}))
+                CONN_STATUS.write_text(json.dumps({"ts": now(), "live": connectors.status(), "claude": connectors.claude(),
+                                                   "stats": connectors.stats()}))
             except Exception:
                 pass
             connectors_view.busy = False
@@ -272,18 +273,43 @@ def connectors_view(refresh=False):
     cat = json.loads((ROOT / "config" / "connector-catalog.json").read_text())
     live = {c["name"].lower(): c for c in cached.get("live") or []}
     mine = {c["name"].lower(): c for c in connectors.registry()}
+    stats = (cached.get("stats") or {}).get("by_connector") or {}
+
+    def setup(k):
+        c = mine.get(k)
+        if not c:
+            return {}
+        t = STATE / f"connector-test-{c['server']}.json"
+        try:
+            test = json.loads(t.read_text()) if t.exists() else None
+        except json.JSONDecodeError:
+            test = None
+        added = parse(c.get("added_at"))
+        st = stats.get(c["name"]) or {}
+        quiet = (connectors.role(c) == "watch" and st and not st.get("items") and (not added or added < datetime.now(ET) - timedelta(days=7)))
+        return {"role": connectors.role(c), "cadence": c.get("cadence") or "every", "areas": c.get("areas") or [],
+                "required": bool(c.get("required")), "use": c.get("use") or "", "stats": st, "test": test,
+                "suggest_lookup": bool(quiet), "last_read": {a: r.get(c["name"]) for a, r in reads.items() if r.get(c["name"])}}
+    try:
+        reads = json.loads((STATE / "connectors-read.json").read_text())
+    except (OSError, json.JSONDecodeError):
+        reads = {}
     rows, seen = [], set()
     for n, c in enumerate(cat["catalog"]):
         k = c["name"].lower(); seen.add(k)
         rows.append({**c, "rank": n + 1, "state": (live.get(k) or {}).get("state", "not_connected"), "added": k in mine,
                      "server": (mine.get(k) or live.get(k) or {}).get("server") or "claude_ai_" + re.sub(r"[^A-Za-z0-9]+", "_", c["name"]).strip("_"),
-                     "discovery": (mine.get(k) or {}).get("discovery"), "tools": len((mine.get(k) or {}).get("read_tools") or [])})
+                     "discovery": (mine.get(k) or {}).get("discovery"), "tools": len((mine.get(k) or {}).get("read_tools") or []),
+                     **setup(k)})
     for k, c in live.items():  # on the account but not in the catalog
         if k not in seen:
             rows.append({"name": c["name"], "category": "On your account", "about": "", "use": "anything relevant to the open items",
                          "rank": len(rows) + 1, "state": c["state"], "added": k in mine, "server": c["server"],
-                         "discovery": (mine.get(k) or {}).get("discovery"), "tools": len((mine.get(k) or {}).get("read_tools") or [])})
-    return {"connect_url": cat.get("connect_url"), "checked_at": cached.get("ts"), "checking": getattr(connectors_view, "busy", False),
+                         "discovery": (mine.get(k) or {}).get("discovery"), "tools": len((mine.get(k) or {}).get("read_tools") or []),
+                         **setup(k)})
+    return {"claude": cached.get("claude"), "areas": sorted(p.stem for p in (ROOT / "leads").glob("*.md") if not p.stem.startswith("_")),
+            "testing": sorted(p.name[len("conntest-"):-len(".lock")] for p in STATE.glob("conntest-*.lock") if lock_live(p.name[:-5])),
+            "connect_url": cat.get("connect_url"), "checked_at": cached.get("ts"), "checking": getattr(connectors_view, "busy", False),
             "connectors": rows}
 
 
@@ -304,6 +330,21 @@ def connectors_post(action, body):
         if any(c["server"] == server and c.get("required") for c in connectors.registry()):
             return 400, {"error": f"{name} is required by every run; it can't be removed here"}
         connectors.remove(server)
+        return 200, {"ok": True}
+    if action == "settings":
+        if not connectors.settings(server, {k: body.get(k) for k in ("role", "areas", "cadence", "use", "required")}):
+            return 404, {"error": "not in your brain"}
+        return 200, {"ok": True}
+    if action == "test":
+        area = body.get("area") or identity.CFG.get("default_area") or ""
+        c = next((x for x in connectors.registry() if x["server"] == server), None)
+        if not c or not c.get("read_tools"):
+            return 400, {"error": "Add it and let it find its read tools first"}
+        if not ID_RE.match(area) or not (ROOT / "leads" / f"{area}.md").exists():
+            return 400, {"error": "unknown area"}
+        if lock_live(f"conntest-{server}"):
+            return 200, {"ok": True, "already": True}
+        spawn("connector-test.sh", server, area)
         return 200, {"ok": True}
     if action == "refresh":
         connectors_view(refresh=True)

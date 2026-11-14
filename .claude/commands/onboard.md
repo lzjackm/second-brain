@@ -4,9 +4,15 @@ description: Set up this second brain for its new owner: name it, connect source
 
 You are setting up a fresh copy of this repo as the user's second brain. Work through the steps in order, one at a time. Ask short questions, propose sensible defaults, and write files yourself. Never send a message, merge, or edit anything outside this repo. Read `AGENTS.md` and `README.md` first.
 
-## 1. Check the machine
+## 1. Check the machine and connect Claude
 - macOS with Homebrew Python at `/opt/homebrew/bin/python3` (the scripts and schedules use it). If it is missing, tell the user to run `brew install python`.
-- Claude Code is logged in (`claude --version` works). Optional: `gh` (GitHub CLI, logged in) for PR features, `terminal-notifier` for notifications.
+- **Claude is the brain's engine, and it is the user's own.** Every run calls their Claude Code (`claude -p`), so it uses whatever they are signed in with; this repo never holds a key, token or account detail. Run `claude auth status --text`:
+  - Signed in with a paid Claude plan (individual, Team or Enterprise): nothing else to do. Runs count against that plan's usage.
+  - Not signed in: tell them to run `claude auth login` in Terminal (it opens a browser) and pick their Claude account, or an Anthropic Console account to pay per use. Check again until it shows signed in.
+  - Using an API key, Amazon Bedrock or Google Vertex: that belongs in their Claude Code user settings (`~/.claude/settings.json`, for example `apiKeyHelper` reading the key from Keychain) or their shell environment, never in this repo. Runs read user settings only (`--setting-sources user`).
+  - Never write a key into any file here, and never paste one into the chat.
+- Tell them what a day costs: the Performance page shows each job's cost; on a plan it counts toward their usage limits.
+- Optional: `gh` (GitHub CLI, logged in) for PR features, `terminal-notifier` for notifications.
 - Run `bin/test.sh`. It must pass before going on.
 
 ## 2. Name the brain and its owner
@@ -20,10 +26,16 @@ Copy `brain.example/` to `brain/`. Then interview the user briefly and edit the 
 If the user has Claude Code feedback memories (`~/.claude/projects/<home path with dashes>/memory/`), offer to turn the feedback ones into rules, each with its source.
 
 ## 4. Connect sources
-Start the app (`/opt/homebrew/bin/python3 app/server.py`, or load its schedule in step 7) and open the **Connectors** page at http://127.0.0.1:7878 (Setup, Connectors). It lists every Claude connector by popularity, with search; the ones this brain reads show as selected.
+Start the app (`/opt/homebrew/bin/python3 app/server.py`, or load its schedule in step 7) and open the **Connectors** page at http://127.0.0.1:7878 (Setup, Connectors). The Claude card at the top must say Signed in. Below it, every Claude connector is listed by popularity, with search.
 - The brain needs **Slack**, and works best with **Google Drive** (meeting notes), **Google Calendar**, the team's **issue tracker** (Linear or Jira) and **GitHub**. Ask which others they use.
-- For each one: if it shows "Not connected", tell the user to connect it at claude.ai (Settings, Connectors) or with `/mcp`, then press Retry. Press **Add**: the brain finds its read tools (never write tools) and every run gets them.
-- Mark the ones scheduled runs must wait for as required (Slack at least) in `config/connectors.json`.
+- For each one: if it shows "Not connected", tell the user to connect it at claude.ai (Settings, Connectors) or with `/mcp`, then press Check status. Press **Add**: the brain finds its read tools (never write tools), and its settings open:
+  - **Role.** Watch: lead runs read it for new work. Lookup: only when an item or link needs it. Off. Defaults come from its category (messaging, email and trackers watch; design, CRM and docs look up).
+  - **What to watch**, in plain words. Channels, folders or teams per area go in that area's lead spec (step 6).
+  - **How often** (watch only): every lead run, or once a day. Each read covers everything since that connector was last read; the first goes back 48 hours.
+  - **Wait for it** (watch only): runs pause until it connects. Slack at least.
+  - **Areas**: which areas' runs read it.
+- Press **Run a test read** on each watch connector: it reads the last 48 hours and lists what would become an item, without queuing anything. Adjust what to watch until the list looks right.
+- After a week, the page shows each connector's items and reads per day, and suggests Lookup for a watch connector that brought in nothing.
 
 ## 5. Link the sources of truth
 Ask, and record the answers:

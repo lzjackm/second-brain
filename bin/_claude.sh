@@ -1,7 +1,7 @@
 #!/bin/zsh
 # Shared headless runner. Usage: _claude.sh <name> <prompt-file> [extra claude args...]
-# Telegram and Vercel plugins are disabled: a second Telegram instance steals the bot's
-# polling from the interactive session, and Vercel hooks add noise.
+# Plugins listed in config/brain.json runs.disabled_plugins are off in runs (one that polls a bot, for example, would
+# steal it from the owner's interactive session).
 # Every run appends one line to log/usage.jsonl (cost, tokens, duration, model) and stamps
 # what it writes with made_by, so Learning can compare cost and quality per job and model.
 set -euo pipefail
@@ -35,7 +35,8 @@ CTX_ARGS=(--disable-slash-commands); [[ -n "$TOOLS" ]] && CTX_ARGS+=(--tools "$T
 # bin/tool_guard.py checks every tool call of every run (secrets, network, connector writes; the executor's one pressed call).
 export BRAIN_PRIVATE=$(/opt/homebrew/bin/python3 -I -c 'import sys; sys.path.insert(0, sys.argv[1]); import press; print(press.PRIVATE)' "$ROOT/bin")
 GUARD="/opt/homebrew/bin/python3 -I $ROOT/bin/tool_guard.py"
-SETTINGS=$(/opt/homebrew/bin/python3 -I -c 'import json,sys; g={"matcher": "*", "hooks": [{"type": "command", "command": sys.argv[1]}]}; print(json.dumps({"enabledPlugins": {"telegram@claude-plugins-official": False, "vercel@claude-plugins-official": False}, "hooks": {"PreToolUse": [g], "PostToolUse": [g]}}))' "$GUARD")
+# Plugins the owner wants off in brain runs (config/brain.json runs.disabled_plugins), e.g. ones that poll or add hooks.
+SETTINGS=$(/opt/homebrew/bin/python3 -I -c 'import json,sys; c=json.load(open(sys.argv[2])); off=(c.get("runs") or {}).get("disabled_plugins") or []; g={"matcher": "*", "hooks": [{"type": "command", "command": sys.argv[1]}]}; print(json.dumps({"enabledPlugins": {p: False for p in off}, "hooks": {"PreToolUse": [g], "PostToolUse": [g]}}))' "$GUARD" "$ROOT/config/brain.json")
 # Connector jobs: right after the Mac wakes, the claude.ai connectors (Slack, Drive, Linear) can be missing for minutes,
 # and a run without them reads nothing and reports "new 0" (Nov 13 9:05 lead). Wait for the required ones to connect, up to 10 min;
 # if they never do, record a failed run and tell the owner instead of a quiet empty one. After the run, the trace is checked too
@@ -46,6 +47,15 @@ alert() {  # title, body: a Mac notification the owner sees
   else osascript -e "display notification \"$2\" with title \"$1\" sound name \"default\"" >/dev/null 2>&1 || true; fi
   printf '{"ts": "%s", "kind": "run_failed", "run": "%s", "note": "%s"}\n' "$(date +%Y-%m-%dT%H:%M:%S%z | sed 's/\(..\)$/:\1/')" "$RUN_ID" "$2" >> "$ROOT/log/notify.jsonl"
 }
+# Every run uses the owner's own Claude Code sign-in (subscription, API key via their user settings, or a cloud provider):
+# nothing about the account lives in this repo. Signed out means no run can work: stop and say how to fix it.
+if ! claude auth status --json 2>/dev/null | grep -q '"loggedIn": *true'; then
+  echo "Claude isn't signed in. Run \`claude auth login\` in Terminal, then rerun." > "$LOG"; cp "$LOG" "$LOG.err"
+  printf '{"ts": "%s", "run": "%s", "name": "%s", "job": "%s", "cost_usd": 0, "error": true, "error_short": "Claude signed out"}\n' \
+    "$(date +%Y-%m-%dT%H:%M:%S%z | sed 's/\(..\)$/:\1/')" "$RUN_ID" "$NAME" "$JOB" >> "$ROOT/log/usage.jsonl"
+  alert "Claude is signed out" "Runs are paused. Run claude auth login in Terminal."
+  exit 1
+fi
 NEED_CONNECTORS=0; [[ -z "$TOOLS" && "${JB_NO_CONNECTORS:-}" != 1 ]] && NEED_CONNECTORS=1
 if (( NEED_CONNECTORS )); then
   for try in {1..10}; do

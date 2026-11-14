@@ -22,3 +22,19 @@ Optional features, switched on in `config/brain.json` under `modules`. `config/b
 - `search_dirs`: folders the agent may read beyond the snapshot (default `~/Projects`).
 
 The answer's voice lives in `brain/architect-voice.md`; rules learned from your feedback go in `brain/architect.md`.
+
+## Connectors
+Managed on the Connectors page; stored in `config/connectors.json`.
+
+| Setting | Options |
+|---|---|
+| Role | watch (lead runs read it for new work) · lookup (only when an item needs it) · off |
+| What to watch | plain words; per-area channels, folders or teams go in `leads/<area>.md` |
+| How often | every lead run · once a day (watch only) |
+| Wait for it | runs pause until it connects (watch only) |
+| Areas | which areas' runs read it (empty = all) |
+
+Each watch connector keeps its own last-read time per area (`state/connectors-read.json`), so a connector added mid-day still reads back 48 hours on its first run. The test read (`bin/connector-test.sh`) is a dry run that lists what would become an item. Stats count the items whose sources link to a connector (`hosts` in `config/connector-catalog.json`) and its reads per day.
+
+## Claude
+The brain runs on the owner's own Claude Code sign-in (`claude auth login`). Keys, Bedrock or Vertex settings live in their Claude Code user settings, never in this repo. The Connectors page shows the account in use; runs stop with an alert when it is signed out.

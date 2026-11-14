@@ -2,6 +2,15 @@
 
 Releases of the second-brain template. Run `/update-brain` to pull one in.
 
+## v0.4.0 (2026-11-14)
+
+- **Claude is yours.** The brain runs on your own Claude Code sign-in; no key or account detail is ever stored here. The Connectors page shows the account in use, `/onboard` walks through signing in (plan, Console, API key, Bedrock or Vertex in your Claude Code user settings), and runs stop with an alert when you are signed out.
+- **Connector settings.** Each connector has a role (Watch: lead runs read it for new work; Lookup: only when an item needs it; Off), what to watch, how often (every lead run or once a day), areas, and whether runs wait for it. Defaults come from its category.
+- **Per-connector read windows.** Each watch connector remembers when it was last read in each area; a new one reads back 48 hours on its first run. A window moves on only after the lead run succeeds.
+- **Test read.** A dry run over the last 48 hours lists what a connector would bring in, without queuing anything.
+- **Is it earning its place?** Items sourced and reads per day over 7 days per connector, and a nudge to switch a quiet watch connector to Lookup.
+- Plugins to keep off in runs move to `config/brain.json` (`runs.disabled_plugins`). The privacy gate also blocks credential patterns.
+
 ## v0.3.0 (2026-11-14)
 
 Security release. Update before connecting real accounts.
