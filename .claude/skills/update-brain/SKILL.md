@@ -1,5 +1,6 @@
 ---
-description: Pull the latest template release into this brain without touching the owner's brain, config or data.
+name: update-brain
+description: Pull the latest template release into this brain without touching the owner's brain, config or data. Use when the user asks to update the brain, pull the latest template release or upgrade. Plain-shell alternative: bin/update.sh.
 ---
 
 Update this repo from the upstream template. Read `AGENTS.md` first. Nothing from upstream runs until the owner has seen the code changes and said yes: the brain's scripts read Slack, Drive and your repos, so new code gets the same access.

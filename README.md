@@ -15,7 +15,7 @@ Nothing is sent, merged or posted until you press the button on that exact step.
 
 ## Start
 
-1. Clone this repo, open it in Claude Code, and run `/onboard`. It names your brain, connects Slack and your other sources, links your codebases and channels, creates your first area, and starts the app.
+1. Clone this repo, `cd` into it, start `claude` there (commands load from the folder Claude starts in), and run `/onboard`. It names your brain, connects Slack and your other sources, links your codebases and channels, creates your first area, and starts the app.
 2. Install the schedules yourself when onboarding shows them: `bin/install-schedules.sh`.
 
 Requirements: macOS, Homebrew Python (`/opt/homebrew/bin/python3`), Claude Code with a Claude plan that covers scheduled runs, and the Slack connector. Recommended: Google Drive and Calendar, Linear or Jira, GitHub (`gh` logged in), `terminal-notifier`.
@@ -36,7 +36,7 @@ Your files are gitignored, so they never leave your machine and updates never to
 
 ## Updating
 
-Template releases come out roughly weekly and are listed in `CHANGELOG.md`. Run `/update-brain` in Claude Code to pull one in; it shows what changed, merges it and runs the tests.
+Template releases come out roughly weekly and are listed in `CHANGELOG.md`. Run `/update-brain` in Claude Code (started in this folder) to pull one in; it shows what changed, merges it and runs the tests. Without Claude, `bin/update.sh` does the same from Terminal.
 
 ## Modules
 

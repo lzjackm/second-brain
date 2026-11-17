@@ -2,6 +2,12 @@
 
 Releases of the second-brain template. Run `/update-brain` to pull one in.
 
+## v0.5.4 (2026-11-17)
+
+- **Update without a slash command.** `bin/update.sh` does what `/update-brain` does from Terminal: shows what's new and the code that changes, asks before merging, merges the release tag, runs the tests and restarts the app.
+- **`/onboard` and `/update-brain` are skills** (`.claude/skills/`). They still run as slash commands, and Claude also picks them up when you ask in plain words ("update my brain").
+- The README says to start `claude` inside the brain folder: commands and skills load from the folder Claude starts in.
+
 ## v0.5.3 (2026-11-17)
 
 - **Run a second copy beside your brain.** The app takes the next free port when 7878 is in use and records it in `state/app.port`; alerts and links follow it. The README shows how to try `/onboard` in a sandbox without touching a brain you already run.

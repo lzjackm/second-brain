@@ -1,5 +1,6 @@
 ---
-description: Set up this second brain for its new owner: name it, connect sources, create the first area, start the app.
+name: onboard
+description: Set up this second brain for its new owner: name it, connect sources, create the first area, start the app. Use when the user wants to set up this brain, start onboarding, or says it's a new install.
 ---
 
 You are setting up a fresh copy of this repo as the user's second brain. Work through the steps in order, one at a time. Ask short questions, propose sensible defaults, and write files yourself. Never send a message, merge, or edit anything outside this repo. Read `AGENTS.md` and `README.md` first.
