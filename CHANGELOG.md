@@ -2,6 +2,15 @@
 
 Releases of the second-brain template. Run `/update-brain` to pull one in.
 
+## v0.5.0 (2026-11-17)
+
+Fixes found in daily use. Update if you press actions in the app.
+- **Quick presses no longer collide.** Pressing several actions within seconds could start two executors whose edits blocked each other; one executor now runs at a time, held by an operating-system lock.
+- **PR actions work when the app runs in the background.** Comment, approve, request changes and merge crashed under the background job's minimal PATH and stayed Running. The executor now sets its own PATH, marks a step failed with the reason on any unexpected error, and logs to `logs/execute-<date>.log`.
+- **Brain edits report correctly.** A trimmed `git status` line made a successful rule edit read as "not added"; an edit is now judged only by what its own run changed, and one that touches another file is undone.
+- **Reply gate.** Every reply step records the ask it answers (who, when, whether you were named, whether it came after your last message, who answered since). `bin/reply_gate.py` retires a reply that stopped being yours, and sync closes instead of redrafting when someone else answered. The reply specialist follows the same rule.
+- New tests: `tests/test_executor.py` (brain edits end to end in a scratch repo) and `tests/test_reply_gate.py`.
+
 ## v0.4.0 (2026-11-14)
 
 - **Claude is yours.** The brain runs on your own Claude Code sign-in; no key or account detail is ever stored here. The Connectors page shows the account in use, `/onboard` walks through signing in (plan, Console, API key, Bedrock or Vertex in your Claude Code user settings), and runs stop with an alert when you are signed out.

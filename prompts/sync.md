@@ -10,7 +10,8 @@ Read `AGENTS.md`, `brain/guardrails.md`, `brain/style.md`, `brain/mediums.md`, `
    - **{{OWNER_FIRST}} already did it** (he replied, decided, sent the thing, merged): set the step `done`, `done_by` `{{OWNER_TOKEN}}`, `done_at` (his message time), `evidence` (his message link), `result` one line ("You replied in the thread at 2:14 PM"). Never send anything.
    - **Someone else did their step**: same, with `done_by` that person.
    - **His reply changed the plan** (new decision, new ask, a different answer than the draft assumed): close what his reply covered, then rewrite the remaining steps and drafts to match where things now stand; add steps if his reply created new work (for him or for someone he asked). Update `context` and `recommendation_short`.
-   - **The thread moved on** so the current draft is stale or wrong (already answered by someone, question changed, facts updated): rewrite the draft so it is correct now, or close the step if no reply is needed anymore.
+   - **Someone else answered the ask**, or the ask turns out not to name {{OWNER_FIRST}}: do not fold their answer into a new draft. Update the step's `ask` (`answered_by`, `names_owner`, `after_owner_last`); bin/reply_gate.py then retires the item. Redraft only when the ask still names {{OWNER_FIRST}} and is still unanswered.
+   - **The thread moved on** so the current draft is stale or wrong (question changed, facts updated): rewrite the draft so it is correct now, or close the step if no reply is needed anymore.
    - **Nothing relevant**: change nothing.
 4. If every step is now resolved, leave it: the app marks the item done. If the whole item became moot, set `status` `stale` with a one-line history reason.
 5. Append a history event for every change (`by` `sync:{{AREA}}`, one line on what changed and why, with the message link). Set the item's `synced_at` to now whether or not anything changed.

@@ -58,6 +58,7 @@ One file per item: `queue/items/<id>.json`. An item is a path to done: a short l
 | `status` | `todo`, `queued` (executor will run it), `failed`, `done`, `done_elsewhere` (the owner did it outside the app), `skipped` |
 | `draft` | For the owner's steps with an action: ready-to-use text. the owner's edits are logged |
 | `execute.kind` | `none` (the owner does it himself; optional `url` and `target_label` show an Open button), `queue_update` (a meeting debrief's JSON list of queue changes, applied by the app in code: `note`, `step_done` on someone else's step, `add_step`, `due`, `create`; all-or-nothing), `slack_send`, `slack_draft`, `gdoc_create`, `gsheet_write`, `calendar_event`, `email_draft`, `pr_merge`, `pr_comment`, `ledger_pr`, `brain_edit`; fields per `brain/mediums.md` |
+| `ask` | Owner reply steps only: the message this reply answers, read from the thread to its latest message: `{"from", "at", "link", "names_owner": bool, "after_owner_last": bool, "answered_by": [names]}`. bin/reply_gate.py retires the item when the ask did not name the owner, the owner already replied after it, or someone answered it (P26). |
 | `execute.medium_why` | Why this medium, quoting the ask ("Sam: 'one summary memo using the deal memo template'") |
 | `elsewhere_note` | the owner's note on where and how he did it. Set with `done_elsewhere` |
 | item `evidence` | Only the message(s) that make this an action item now, usually one: the ask, with its link. It is the only source line the owner sees on the item. Research goes in step `evidence` and the report (S16) |

@@ -15,6 +15,7 @@ Per kind:
 
 Usage: bin/execute.py   (the app starts it on a press; one at a time)
 """
+import hashlib
 import html
 import json
 import os
@@ -37,6 +38,9 @@ CACHE = Path.home() / "Library" / "Caches" / identity.SLUG
 PR_URL = re.compile(r"^https://github\.com/([\w.-]+)/([\w.-]+)/pull/(\d+)/?$")
 LEDGER_FILES = re.compile(r"\.md$")
 os.umask(0o077)
+# The app starts this under launchd, whose PATH lacks Homebrew: gh and git must still be found (Nov 16: every PR step
+# crashed with "No such file: gh" and stayed Running).
+os.environ["PATH"] = "/opt/homebrew/bin:/usr/local/bin:" + os.environ.get("PATH", "/usr/bin:/bin")
 
 
 def now():
@@ -249,11 +253,21 @@ def edit_run(name, prompt, allowed):
     p.unlink(missing_ok=True)
 
 
-def git(*args, cwd=ROOT):
-    r = subprocess.run(["git", "-c", "core.hooksPath=/dev/null", *args], cwd=cwd, capture_output=True, text=True)
+def git(*args, cwd=None):
+    r = subprocess.run(["git", "-c", "core.hooksPath=/dev/null", *args], cwd=cwd or ROOT, capture_output=True, text=True)
     if r.returncode:
         raise Fail((r.stderr or r.stdout).strip()[-300:])
-    return r.stdout.strip()
+    return r.stdout.rstrip("\n")    # keep leading spaces: `status --porcelain` lines start with them
+
+
+def brain_state():
+    """Each changed file under brain/ with a hash of its contents, to see exactly what an edit run touched."""
+    out = {}
+    for line in git("status", "--porcelain", "--", "brain").splitlines():
+        path = line[3:].strip('"')
+        f = ROOT / path
+        out[path] = hashlib.sha256(f.read_bytes()).hexdigest() if f.is_file() else "gone"
+    return out
 
 
 def do_brain_edit(item, step):
@@ -261,14 +275,19 @@ def do_brain_edit(item, step):
     if not re.fullmatch(r"brain/[\w/-]+\.md", target) or ".." in target or not (ROOT / target).is_file():
         raise Fail("The target is not a file in brain/")
     if git("status", "--porcelain", "--", target):
-        raise Fail(f"{target} has uncommitted changes; commit or discard them first")
+        raise Fail(f"{target} has changes no rule press made; commit or discard them, then press again")
+    before = brain_state()
     edit_run(f"execedit-{item['id']}-{step['id']}",
              f"Add this rule to {target}, following brain/README.md (supersede an older rule it replaces). Change nothing "
              f"else and touch no other file.\n\nThe rule:\n{step.get('draft')}\n",
              ["Read", "Grep", "Glob", f"Edit({tilde(ROOT / target)})"])
-    changed = [l[3:] for l in git("status", "--porcelain").splitlines() if l[3:] == target or l[3:].startswith("brain/")]
-    if changed != [target]:
-        raise Fail("The rule was not added" if not changed else f"Unexpected files changed: {', '.join(changed)}")
+    after = brain_state()
+    if target not in after:
+        raise Fail("The rule was not added")
+    other = [p for p in after if p != target and after[p] != before.get(p)]
+    if other:
+        git("checkout", "--", target)       # leave nothing half-done behind
+        raise Fail(f"The edit also changed {', '.join(other)}; nothing was kept. Press again.")
     rid = re.search(r"\*\*([A-Z]{1,4}\d+)\*\*", step.get("draft") or "")
     short = re.sub(r"[*_`]", "", (step.get("draft") or "").split("\n")[0])[:70]
     git("add", "--", target)
@@ -386,6 +405,9 @@ def run_once():
         except Fail as e:
             finish(it, s, False, error=str(e))
             failed += 1
+        except Exception as e:      # never leave a pressed step Running: fail it with the reason
+            finish(it, s, False, error=f"The app hit an error ({type(e).__name__}: {str(e)[:150]}). Nothing else ran.")
+            failed += 1
         save(f, it)
     if ledger:
         loaded = [(f, json.loads(f.read_text()), sid) for f, _, sid in ledger]
@@ -394,6 +416,8 @@ def run_once():
             result, link, ok, err = *do_ledger(loaded[0][1], steps), True, ""
         except Fail as e:
             result, link, ok, err = "", "", False, str(e)
+        except Exception as e:
+            result, link, ok, err = "", "", False, f"The app hit an error ({type(e).__name__}: {str(e)[:150]}). Nothing was merged."
         for f, it, sid in loaded:
             it = json.loads(f.read_text())
             s = next(x for x in it["steps"] if x["id"] == sid)
@@ -404,16 +428,17 @@ def run_once():
 
 
 def main():
-    lock = STATE / "execute.lock"
+    # One executor at a time. A kernel lock (released when the process ends, however it ends) closes the race two
+    # quick presses hit with a pid file: both started before either had written its pid (Nov 15, brain edits).
+    import fcntl
+    fh = open(STATE / "execute.flock", "w")
     try:
-        lock.mkdir()
-    except FileExistsError:
-        try:
-            os.kill(int((lock / "pid").read_text()), 0)
-            print("execute already running")
-            return
-        except (OSError, ValueError):
-            pass
+        fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        print("execute already running")
+        return
+    lock = STATE / "execute.lock"            # the app's "executor running" indicator
+    lock.mkdir(exist_ok=True)
     (lock / "pid").write_text(str(os.getpid()))
     try:
         total_d = total_f = 0

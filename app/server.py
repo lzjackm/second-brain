@@ -52,7 +52,8 @@ from stale import stale_info  # noqa: E402  (shared with the hourly notifier)
 import checks  # noqa: E402  (item invariants; docs/incidents.md)
 import meetings  # noqa: E402  (meetings the owner runs: calendar, agenda, debrief)
 import agent_session  # noqa: E402
-import press  # noqa: E402  (the owner's presses: the only thing that lets the executor act)
+import press  # noqa: E402
+import reply_gate  # noqa: E402  (the owner's presses: the only thing that lets the executor act)
 import connectors  # noqa: E402  (config/connectors.json: what runs may read)  (Talk: the owner and a step's research agent)
 
 
@@ -191,6 +192,7 @@ def executor_watch():
                         for f in ITEMS.glob("*.json") for it in [json.loads(f.read_text())] for s in it.get("steps") or [])
             if stuck and not lock_live("execute"):
                 spawn("execute.sh")
+            reply_gate.sweep()        # retire replies that stopped being the owner's (bin/reply_gate.py)
         except Exception:
             pass
 

@@ -29,8 +29,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "bin")) if str(ROOT / "bin") not in sys.path else None
 from identity import is_owner  # noqa: E402
-import identity  # noqa: E402  (config/brain.json)
+import identity  # noqa: E402
+import reply_gate  # noqa: E402  (config/brain.json)
 PENDING = {"todo", "queued", "failed"}
+ASK_SINCE = "2026-11-16T17:00"  # reply steps record their ask from here on (K12)
 WHY_OWNER_SINCE = "2026-11-11"  # items created before the why_owner rule existed are not flagged
 LOCKED = re.compile(r"\|\s*(Locked|Decided|Final)\s*\|", re.I)
 SEND_KINDS = {"slack_send", "slack_draft", "email_draft", "pr_comment", "pr_approve", "pr_request_changes"}
@@ -122,6 +124,13 @@ def run(item):
         why = item.get("why_owner") or ""
         if CHANNEL_ASK.search(why) and not DIRECT_ASK.search(why):
             fail("K9", "warn", "Nobody asked you directly: it rests on a channel ask or on owning the area", cur)
+    if cur and is_owner(cur.get("owner")) and (cur.get("execute") or {}).get("kind") in ("slack_send", "slack_draft") \
+            and (item.get("created") or "") >= ASK_SINCE:
+        ask = cur.get("ask")
+        if not isinstance(ask, dict):
+            fail("K12", "warn", "Doesn't record the ask it answers (who, when, whether you were named, who answered since)", cur)
+        elif reply_gate.verdict(ask):
+            fail("K12", "block", "Not yours to answer: " + reply_gate.verdict(ask), cur)
     ev = [e for e in (item.get("evidence") or []) + [e for s in steps for e in s.get("evidence") or []] if e]
     if not ev and item.get("status") in ("open", "waiting"):
         fail("K5", "warn", "No source recorded")
