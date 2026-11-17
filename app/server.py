@@ -162,6 +162,11 @@ def load_items():
             item["status"] = "open"
             item.setdefault("history", []).append({"ts": now(), "by": "app", "event": "unsnoozed"})
             changed = True
+        for s in item.get("steps") or []:      # one spelling for the owner's steps: the token (identity.OWNER_NAMES)
+            o = (s.get("owner") or "").strip()
+            if o and o != OWNER and is_owner(o):
+                s["owner"] = OWNER
+                changed = True
         had_steps = bool(item.get("steps"))
         status = compute_status(item)
         if status != item.get("status") or not had_steps:
@@ -354,9 +359,20 @@ def connectors_post(action, body):
     return 404, {"error": "unknown action"}
 
 
+# Children get a PATH that finds Homebrew and Claude Code (as bin/_env.zsh sets): the app runs under launchd, whose bare
+# PATH hid gh and stopped the meeting agent and PR steps before they started (Nov 16, Nov 17).
+CHILD_ENV = {**os.environ, "PATH": ":".join([str(Path.home() / ".local/bin"), str(Path.home() / ".claude/local"),
+                                             "/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin"])}
+
+
 def spawn(script, *args):
-    subprocess.Popen([str(ROOT / "bin" / script), *args], cwd=ROOT,
-                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    """Start a script in the background. Its output goes to logs/spawn-<script>.log, so a start that fails is never silent."""
+    log = open(ROOT / "logs" / f"spawn-{Path(script).stem}.log", "a")
+    log.write(f"\n== {now()} {script} {' '.join(args)}\n")
+    log.flush()
+    subprocess.Popen([str(ROOT / "bin" / script), *args], cwd=ROOT, env=CHILD_ENV,
+                     stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+    log.close()
 
 
 def act(item_id, body):

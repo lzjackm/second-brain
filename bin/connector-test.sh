@@ -3,6 +3,7 @@
 # before it goes live. Writes only state/connector-test-<server>.json; nothing reaches the queue.
 # Usage: bin/connector-test.sh <server> <area>
 set -euo pipefail
+source "${0:A:h}/_env.zsh"   # PATH for Homebrew and Claude Code: the app and launchd start scripts with a bare one
 ROOT="${0:A:h:h}"
 SERVER="$1"; AREA="$2"
 [[ "$SERVER" =~ '^[A-Za-z][A-Za-z0-9_.-]{1,79}$' && "$AREA" =~ '^[a-z0-9][a-z0-9-]*$' && -f "$ROOT/leads/$AREA.md" ]] || { echo "bad connector or area" >&2; exit 2; }

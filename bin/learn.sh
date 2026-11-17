@@ -3,6 +3,7 @@
 # Usage: bin/learn.sh <slug> <start|continue|quiz|ask|final>
 # No work sources: the tutor sees only the topic's own state and the public web.
 set -euo pipefail
+source "${0:A:h}/_env.zsh"   # PATH for Homebrew and Claude Code: the app and launchd start scripts with a bare one
 ROOT="${0:A:h:h}"
 SLUG="$1"; MODE="${2:-continue}"
 [[ "$SLUG" =~ ^[a-z0-9-]+$ && -f "$ROOT/learn/topics/$SLUG.json" ]] || { echo "no topic $SLUG"; exit 1; }

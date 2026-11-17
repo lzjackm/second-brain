@@ -6,6 +6,7 @@
 # Times are local. launchd runs a missed calendar job once when the Mac wakes. Every job runs in working hours only:
 # never assume the Mac is on overnight or at weekends.
 set -euo pipefail
+source "${0:A:h}/_env.zsh"   # PATH for Homebrew and Claude Code: the app and launchd start scripts with a bare one
 ROOT="${0:A:h:h}"
 DEST=~/Library/LaunchAgents
 typeset -A SRC AREA

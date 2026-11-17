@@ -5,6 +5,7 @@
 # for a pr_merge step after the owner presses Merge; it can do nothing else.
 # Usage: bin/gh_enqueue.sh <pr-url>
 set -euo pipefail
+source "${0:A:h}/_env.zsh"   # PATH for Homebrew and Claude Code: the app and launchd start scripts with a bare one
 URL="$1"
 [[ "$URL" =~ ^https://github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)/pull/([0-9]+)$ ]] || { echo "not a PR url: $URL"; exit 1; }
 O="${match[1]}"; R="${match[2]}"; N="${match[3]}"

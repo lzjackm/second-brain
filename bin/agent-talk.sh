@@ -3,6 +3,7 @@
 # it keeps everything it already read. Loops while the owner has written something the agent hasn't answered.
 # Usage: bin/agent-talk.sh <item_id> <step_id>
 set -euo pipefail
+source "${0:A:h}/_env.zsh"   # PATH for Homebrew and Claude Code: the app and launchd start scripts with a bare one
 ROOT="${0:A:h:h}"
 ITEM="$1"; STEP="$2"
 [[ "$ITEM" =~ '^[A-Za-z0-9][A-Za-z0-9_-]*$' ]] || { echo "bad item id" >&2; exit 2; }

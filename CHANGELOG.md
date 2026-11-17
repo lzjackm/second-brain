@@ -2,6 +2,13 @@
 
 Releases of the second-brain template. Run `/update-brain` to pull one in.
 
+## v0.5.2 (2026-11-17)
+
+- **Your own steps always show their actions.** Runs that wrote your first name as a step's owner made the app treat the step as someone else's, hiding Send, Skip, Ask and the agent. Your first name now always counts as you, and the app rewrites any of your names to your owner token on load.
+- **Every script finds Homebrew and Claude Code.** The meeting agent and other app-started runs stopped before starting when the app's bare PATH hid `gh`. The app now gives every process it starts the full PATH, every script loads `bin/_env.zsh` (a test enforces it), and start-up output goes to `logs/spawn-<script>.log`.
+- **External copy reads like a company announcement (S18).** Text for partners or clients uses sentence case and full punctuation; `execute.audience: external` marks it, and check K13 flags chat-style copy before Send.
+- The action bar's long "Open …" link shortens instead of pushing the menu off the card.
+
 ## v0.5.1 (2026-11-17)
 
 Fresh-install fixes, from the first outside setup.

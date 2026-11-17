@@ -6,6 +6,7 @@
 #    (.json, .err, .log): 30 days; empty .err files at once.
 #  - State: rendered prompts after 7 days; briefs and signals after 14; one-off backups (*.tgz, *.before-*) after 7.
 set -euo pipefail
+source "${0:A:h}/_env.zsh"   # PATH for Homebrew and Claude Code: the app and launchd start scripts with a bare one
 ROOT="${0:A:h:h}"
 cd "$ROOT"
 before=$(du -sk agents logs state 2>/dev/null | awk '{s+=$1} END {print s+0}')

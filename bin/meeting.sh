@@ -4,6 +4,7 @@
 # his notes and the meeting notes). The app starts it when the owner chooses a meeting, marks it run, and settles differences.
 # Usage: bin/meeting.sh <item_id> <step_id>   (the step's meeting_phase says prep or debrief)
 set -euo pipefail
+source "${0:A:h}/_env.zsh"   # PATH for Homebrew and Claude Code: the app and launchd start scripts with a bare one
 ROOT="${0:A:h:h}"
 R="${ROOT/#$HOME/~}"   # this folder as ~/..., for permission rules
 ITEM="$1"; STEP="$2"

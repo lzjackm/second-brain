@@ -13,7 +13,10 @@ SLUG = CFG.get("slug") or "second-brain"          # Keychain service and notific
 OWNER = CFG.get("owner_token") or "me"                 # marks the owner's steps, chat messages and history entries
 OWNER_NAME = CFG.get("owner_name") or ""
 OWNER_FIRST = CFG.get("owner_first") or (OWNER_NAME.split()[0] if OWNER_NAME else "the owner")
-OWNER_NAMES = {OWNER, "me", *(a.strip().lower() for a in CFG.get("owner_aliases") or []), *([OWNER_NAME.lower()] if OWNER_NAME else [])}
+# Every way a run may write the owner: the token, "me", aliases, the full and the first name. Runs echo the first name
+# the prompts use; missing it made the template's app treat the owner's own steps as someone else's (Nov 17).
+OWNER_NAMES = {OWNER, "me", *(a.strip().lower() for a in CFG.get("owner_aliases") or []),
+               *([OWNER_NAME.lower()] if OWNER_NAME else []), *([OWNER_FIRST.lower()] if CFG.get("owner_first") or OWNER_NAME else [])}
 OWNER_EMAILS = {e.lower() for e in CFG.get("owner_emails") or []}
 GITHUB_LOGINS = set(CFG.get("github_logins") or [])
 TZ = ZoneInfo(CFG.get("timezone") or "America/New_York")

@@ -4,6 +4,7 @@
 # writing-limit enforcer (bin/brevity.py) and duplicate merge (bin/dedupe.py) for the area's items.
 # Usage: bin/prefetch.sh <area>
 set -euo pipefail
+source "${0:A:h}/_env.zsh"   # PATH for Homebrew and Claude Code: the app and launchd start scripts with a bare one
 ROOT="${0:A:h:h}"; AREA="$1"; PY=/opt/homebrew/bin/python3
 [[ -x "$ROOT/bin/prefetch-$AREA.sh" ]] && { "$ROOT/bin/prefetch-$AREA.sh" || echo "prefetch-$AREA failed" >&2; }
 LEDGER_AREA=$($PY -I -c 'import sys; sys.path.insert(0, sys.argv[1]); import identity as i; print(i.LEDGER_AREA if i.LEDGER_PATH else "")' "$ROOT/bin")

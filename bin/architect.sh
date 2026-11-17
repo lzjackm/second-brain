@@ -3,6 +3,7 @@
 # Read only everywhere: snapshots, local repos, Slack, Drive, Linear, GitHub. Nothing is sent or edited.
 # Usage: bin/architect.sh <id>
 set -euo pipefail
+source "${0:A:h}/_env.zsh"   # PATH for Homebrew and Claude Code: the app and launchd start scripts with a bare one
 ROOT="${0:A:h:h}"; ID="$1"; PY=/opt/homebrew/bin/python3
 R="${ROOT/#$HOME/~}"   # this folder as ~/..., for permission rules
 [[ "$ID" =~ ^[a-z0-9-]+$ && -f "$ROOT/architect/$ID.json" ]] || { echo "no question $ID"; exit 1; }

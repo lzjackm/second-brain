@@ -4,6 +4,7 @@
 # starts it on Refresh.
 # Usage: bin/calendar.sh [YYYY-MM-DD]
 set -euo pipefail
+source "${0:A:h}/_env.zsh"   # PATH for Homebrew and Claude Code: the app and launchd start scripts with a bare one
 ROOT="${0:A:h:h}"
 R="${ROOT/#$HOME/~}"   # this folder as ~/..., for permission rules
 DATE="${1:-$(TZ=America/New_York date +%Y-%m-%d)}"

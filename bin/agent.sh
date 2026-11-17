@@ -2,6 +2,7 @@
 # Run a research agent on one step. The app starts it when the owner starts the agent from the Agent panel (Agent button or h).
 # Usage: bin/agent.sh <item_id> <step_id>
 set -euo pipefail
+source "${0:A:h}/_env.zsh"   # PATH for Homebrew and Claude Code: the app and launchd start scripts with a bare one
 ROOT="${0:A:h:h}"
 ITEM="$1"; STEP="$2"
 [[ "$ITEM" =~ '^[A-Za-z0-9][A-Za-z0-9_-]*$' ]] || { echo "bad item id" >&2; exit 2; }

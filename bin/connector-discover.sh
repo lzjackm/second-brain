@@ -3,6 +3,7 @@
 # allowed to runs). The app starts it when the owner adds a connector, or retries it after they connect one.
 # Usage: bin/connector-discover.sh <server>   (e.g. claude_ai_Notion)
 set -euo pipefail
+source "${0:A:h}/_env.zsh"   # PATH for Homebrew and Claude Code: the app and launchd start scripts with a bare one
 ROOT="${0:A:h:h}"
 SERVER="$1"
 [[ "$SERVER" =~ '^[A-Za-z][A-Za-z0-9_.-]{1,79}$' ]] || { echo "bad connector" >&2; exit 2; }

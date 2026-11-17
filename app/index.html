@@ -169,6 +169,8 @@ body.chat-open.talk-wide .shell { padding-right: 560px; } body.talk-wide #drawer
 .cur .cbody { container-type: inline-size; }
 @container (max-width: 640px) { .bar .btn.ghost:not(.keep) .lbl { display: none; } .bar .btn.ghost { padding: 0 9px; } }
 .bar .iconbtn { flex-shrink: 0; }
+.bar > * { flex-shrink: 0; }  /* icons and the menu never shrink; only the link label below does */
+.bar .btn.keep { flex: 0 1 auto; min-width: 0; overflow: hidden; } .bar .btn.keep .lbl { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bar { display: flex; align-items: center; gap: 2px; flex-wrap: nowrap; min-width: 0; } .bar .btn.ghost { padding: 0 10px; } .bar .btn.primary { margin-right: 6px; }
 .btn { position: relative; display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; border-radius: var(--r); border: 1px solid transparent; background: transparent; color: var(--ink); font-weight: 500; cursor: pointer; white-space: nowrap; transition: background var(--ease), border-color var(--ease), transform 80ms; }
 .btn:active { transform: translateY(1px); }
@@ -894,7 +896,7 @@ function currentCard(i, s, why) {
       ${point && !s.conflicts?.length ? `<div class="why">${icon("chat")}<span>To raise: ${esc(point)}</span></div>` : ""}
       ${mine && s.conflicts?.length ? `<ol class="conflicts">${s.conflicts.map(c => `<li><div class="ct">${esc(c.topic)}</div><div><span class="lbl">Your notes</span> ${esc(c.yours)}</div><div><span class="lbl">Meeting notes</span> ${esc(c.notes_say)}${c.notes_url ? ` <a href="${safeUrl(c.notes_url)}" target="_blank" rel="noopener">source</a>` : ""}</div>${c.affects ? `<div class="soft">Changes: ${esc(c.affects)}</div>` : ""}</li>`).join("")}</ol>` : ""}
       ${hasDraft ? `<textarea class="draft" id="draft" data-step="${esc(s.id)}" spellcheck="true" ${busy ? "disabled" : ""}>${esc(s.draft || "")}</textarea>` : ""}
-      <div class="bar">${busy && !blocked ? "" : primary}${mine && kind === "none" && s.execute?.url ? `<a class="btn ghost keep" href="${safeUrl(s.execute.url)}" target="_blank" rel="noopener">${icon("out")}<span class="lbl">Open ${esc(s.execute.target_label || "link")}</span></a>` : ""}
+      <div class="bar">${busy && !blocked ? "" : primary}${mine && kind === "none" && s.execute?.url ? `<a class="btn ghost keep" href="${safeUrl(s.execute.url)}" target="_blank" rel="noopener" title="Open ${esc(s.execute.target_label || "link")}">${icon("out")}<span class="lbl">Open ${esc(s.execute.target_label || "link")}</span></a>` : ""}
         ${mine && !busy ? `<button class="btn ghost" data-step-act="revise_step" title="Revise (v)">${icon("pen")}<span class="lbl">Revise</span> <kbd>v</kbd></button>` : ""}
         <button class="btn ghost" data-chat-open title="Ask (c)">${icon("chat")}<span class="lbl">Ask</span> <kbd>c</kbd>${unread(i) ? '<span class="badge-dot"></span>' : ""}</button>
         ${busy && !blocked ? "" : `<button class="btn ghost" data-step-act="agent_step" title="${agent ? "Retry agent" : "Agent"} (h)">${icon("bot")}<span class="lbl">${agent ? "Retry agent" : "Agent"}</span> <kbd>h</kbd></button>`}
@@ -1267,7 +1269,7 @@ async function stepAct(action) {
     if (!learned) return;
   } else if (action === "do_step" && (s.execute?.kind || "none") === "none" && isOwner(s.owner) && i.type !== "meeting" && (s.draft || "").trim()) {
     // Only a call or question (the step has a talking point) has an answer worth asking for; anything else just closes.
-    learned = await ask({ title: "Done. What was the answer?", sub: "Optional. It closes the step waiting on this answer and redrafts your next message. Anything you add is also used as feedback.", placeholder: "Morgan owns the FAQ; final by Friday EOD", multiline: true, skip: "Skip" });
+    learned = await ask({ title: "Closing this step. What came of it?", sub: "This step was a call or question, so it may have an answer. A note records the outcome, redrafts your next step, and teaches the brain. Add one and save, Skip to close with no note, or Cancel to keep the step open.", placeholder: "Morgan owns the FAQ; final by Friday EOD", multiline: true, skip: "Skip" });
     if (learned === null) return;
   }
   if (action === "skip_step") { note = await ask({ title: "Skip this step?", sub: "Optional reason.", placeholder: "Not needed" }); if (note === null) return; }

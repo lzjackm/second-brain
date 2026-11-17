@@ -3,6 +3,7 @@
 # "revise" is the fast path the app starts when the owner asks for a revision or a redraft:
 # it only reworks the items he touched and skips the full source sweep.
 set -euo pipefail
+source "${0:A:h}/_env.zsh"   # PATH for Homebrew and Claude Code: the app and launchd start scripts with a bare one
 ROOT="${0:A:h:h}"
 AREA="$1"
 MODE="${2:-lead}"

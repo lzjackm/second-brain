@@ -32,6 +32,30 @@ from identity import is_owner  # noqa: E402
 import identity  # noqa: E402
 import reply_gate  # noqa: E402  (config/brain.json)
 PENDING = {"todo", "queued", "failed"}
+SLANG = re.compile(r"\b(gm|gmgm|gn|pls|plz|lmk|ty|tysm|np|imo|ngl|btw|tbh|lol|ser|wagmi|fyi)\b|!{2,}|\b\d{1,2}(st|nd|rd|th)\b", re.I)
+
+
+def external_copy(step):
+    """Text in a draft that reaches people outside the company: the whole draft when `execute.audience` is external,
+    else any quoted block of 60+ characters (copy written for someone to forward)."""
+    draft = step.get("draft") or ""
+    if (step.get("execute") or {}).get("audience") == "external":
+        return [draft]
+    return [m for m in re.findall(r'["\u201c]([^"\u201d]{60,})["\u201d]', draft)]
+
+
+def register_problems(text):
+    """S18: sentences that start lowercase, and chat shorthand."""
+    out = []
+    starts = [m.group(1) for m in re.finditer(r"(?:^|[.!?]\s+|\n\s*)([A-Za-z])", text)]
+    if any(c.islower() for c in starts):
+        out.append("starts a sentence in lowercase")
+    m = SLANG.search(text)
+    if m:
+        out.append(f"uses \"{m.group(0)}\"")
+    return out
+
+
 ASK_SINCE = "2026-11-16T17:00"  # reply steps record their ask from here on (K12)
 WHY_OWNER_SINCE = "2026-11-11"  # items created before the why_owner rule existed are not flagged
 LOCKED = re.compile(r"\|\s*(Locked|Decided|Final)\s*\|", re.I)
@@ -131,6 +155,11 @@ def run(item):
             fail("K12", "warn", "Doesn't record the ask it answers (who, when, whether you were named, who answered since)", cur)
         elif reply_gate.verdict(ask):
             fail("K12", "block", "Not yours to answer: " + reply_gate.verdict(ask), cur)
+    for s in pend:
+        if is_owner(s.get("owner")) and (s.get("execute") or {}).get("kind") in SEND_KINDS:
+            probs = [p for t in external_copy(s) for p in register_problems(t)]
+            if probs:
+                fail("K13", "block", "External copy reads like a chat: " + ", ".join(dict.fromkeys(probs)) + " (S18)", s)
     ev = [e for e in (item.get("evidence") or []) + [e for s in steps for e in s.get("evidence") or []] if e]
     if not ev and item.get("status") in ("open", "waiting"):
         fail("K5", "warn", "No source recorded")

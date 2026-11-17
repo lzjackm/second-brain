@@ -29,6 +29,26 @@ class FindsClaude(unittest.TestCase):
         self.assertEqual(out, str(stub))
 
 
+class ScriptsLoadEnv(unittest.TestCase):
+    def test_every_script_sets_its_path(self):
+        """The app and launchd start scripts with a bare PATH; one that skips bin/_env.zsh can't find gh or claude
+        (Nov 17: the meeting agent stopped before starting)."""
+        skip = {"sandbox.sh", "gitread.sh"}     # run by other scripts, with absolute paths
+        missing = [p.name for p in sorted((ROOT / "bin").glob("*.sh"))
+                   if p.name not in skip and "_env.zsh" not in p.read_text()]
+        self.assertEqual(missing, [])
+
+
+class OwnerNames(unittest.TestCase):
+    def test_first_name_counts_as_owner(self):
+        """Nov 17: runs wrote the owner's first name, so the template's app hid Send, Skip, Ask and the agent."""
+        import identity
+        if identity.OWNER_FIRST and identity.OWNER_FIRST != "the owner":
+            self.assertTrue(identity.is_owner(identity.OWNER_FIRST))
+            self.assertTrue(identity.is_owner(identity.OWNER_FIRST.lower()))
+        self.assertTrue(identity.is_owner(identity.OWNER))
+
+
 class Discovery(unittest.TestCase):
     S = "claude_ai_Slack"
     REAL = {f"mcp__claude_ai_Slack__{n}" for n in ("slack_read_channel", "slack_read_thread", "slack_search_public",

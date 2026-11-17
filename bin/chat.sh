@@ -2,6 +2,7 @@
 # Answer the owner's questions on one item. The app starts it on Ask.
 # Usage: bin/chat.sh <item_id>
 set -euo pipefail
+source "${0:A:h}/_env.zsh"   # PATH for Homebrew and Claude Code: the app and launchd start scripts with a bare one
 ROOT="${0:A:h:h}"
 R="${ROOT/#$HOME/~}"   # this folder as ~/..., for permission rules
 ITEM="$1"
