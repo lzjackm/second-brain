@@ -2,6 +2,10 @@
 
 Releases of the second-brain template. Run `/update-brain` to pull one in.
 
+## v0.5.3 (2026-11-17)
+
+- **Run a second copy beside your brain.** The app takes the next free port when 7878 is in use and records it in `state/app.port`; alerts and links follow it. The README shows how to try `/onboard` in a sandbox without touching a brain you already run.
+
 ## v0.5.2 (2026-11-17)
 
 - **Your own steps always show their actions.** Runs that wrote your first name as a step's owner made the app treat the step as someone else's, hiding Send, Skip, Ask and the agent. Your first name now always counts as you, and the app rewrites any of your names to your owner token on load.

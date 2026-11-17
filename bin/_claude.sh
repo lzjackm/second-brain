@@ -43,7 +43,7 @@ SETTINGS=$(/opt/homebrew/bin/python3 -I -c 'import json,sys; c=json.load(open(sy
 # (connectors can still be missing inside the session): such a run is marked failed and retried once 3 min later.
 alert() {  # title, body: a Mac notification the owner sees
   local tn=$(command -v terminal-notifier || true)
-  if [[ -n "$tn" ]]; then "$tn" -title "$1" -message "$2" -open "http://127.0.0.1:7878/#ops" -sound default >/dev/null 2>&1 || true
+  if [[ -n "$tn" ]]; then "$tn" -title "$1" -message "$2" -open "http://127.0.0.1:$(cat "$ROOT/state/app.port" 2>/dev/null || echo 7878)/#ops" -sound default >/dev/null 2>&1 || true
   else osascript -e "display notification \"$2\" with title \"$1\" sound name \"default\"" >/dev/null 2>&1 || true; fi
   printf '{"ts": "%s", "kind": "run_failed", "run": "%s", "note": "%s"}\n' "$(date +%Y-%m-%dT%H:%M:%S%z | sed 's/\(..\)$/:\1/')" "$RUN_ID" "$2" >> "$ROOT/log/notify.jsonl"
 }

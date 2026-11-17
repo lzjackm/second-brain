@@ -323,8 +323,13 @@ def queue_items(match, skip_id):
             for n in match(s.get("owner")):
                 out.append({"owner": n, "source": "queue", "id": it["id"], "step_id": s["id"], "kind": it.get("type"),
                             "text": f"{it.get('title', '')}: {s.get('text', '')}", "status": it.get("status"),
-                            "due": it.get("due"), "url": f"http://127.0.0.1:7878/#item={it['id']}"})
+                            "due": it.get("due"), "url": f"http://127.0.0.1:{app_port()}/#item={it['id']}"})
     return out
+
+
+def app_port():
+    f = ROOT / "state" / "app.port"
+    return f.read_text().strip() if f.exists() else "7878"
 
 
 def collect(item_id):

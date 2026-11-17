@@ -32,7 +32,7 @@ SYNOPSIS = ROOT / "synopsis"
 STATE = ROOT / "state"
 INDEX = Path(__file__).resolve().parent / "index.html"
 ET = ZoneInfo("America/New_York")
-PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 7878
+PORT = int(sys.argv[1]) if len(sys.argv) > 1 else int((json.loads((ROOT / "config" / "brain.json").read_text()) if (ROOT / "config" / "brain.json").exists() else {}).get("port") or 7878)   # main() may move it
 # A fresh secret per launch, embedded in the page: every /api call must carry it, so other sites and other local
 # pages cannot drive the app even when the browser sends the request.
 TOKEN = secrets.token_urlsafe(32)
@@ -1420,6 +1420,20 @@ if __name__ == "__main__":
     os.umask(0o077)   # items, logs and state hold Slack and Drive content: owner-only files
     for d in (ITEMS, LOG.parent, SYNOPSIS, STATE, AGENTS, LEARN):
         d.mkdir(parents=True, exist_ok=True)
+    # Another brain (or anything else) may hold the port: take the next free one, so a second copy, such as a sandbox
+    # for trying /onboard, runs beside the first. state/app.port records where this one is.
+    server = None
+    for port in ([PORT] if len(sys.argv) > 1 else range(PORT, PORT + 20)):
+        try:
+            server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+            break
+        except OSError:
+            continue
+    if not server:
+        sys.exit(f"No free port from {PORT}")
+    PORT = server.server_address[1]
+    ORIGINS = {f"http://127.0.0.1:{PORT}", f"http://localhost:{PORT}"}
+    (STATE / "app.port").write_text(str(PORT))
     threading.Thread(target=executor_watch, daemon=True).start()
-    print(f"{identity.BRAIN_NAME} queue on http://127.0.0.1:{PORT}")
-    ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
+    print(f"{identity.BRAIN_NAME} queue on http://127.0.0.1:{PORT}", flush=True)
+    server.serve_forever()

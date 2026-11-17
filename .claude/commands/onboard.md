@@ -27,7 +27,7 @@ Copy `brain.example/` to `brain/`. Then interview the user briefly and edit the 
 If the user has Claude Code feedback memories (`~/.claude/projects/<home path with dashes>/memory/`), offer to turn the feedback ones into rules, each with its source.
 
 ## 4. Connect sources
-Start the app (`/opt/homebrew/bin/python3 app/server.py`, or load its schedule in step 7) and open the **Connectors** page at http://127.0.0.1:7878 (Setup, Connectors). The Claude card at the top must say Signed in. Below it, every Claude connector is listed by popularity, with search.
+Start the app (`/opt/homebrew/bin/python3 app/server.py`, or load its schedule in step 7) and open the address it prints (http://127.0.0.1:7878, or the next free port if another brain already uses it; `state/app.port` has it), then the **Connectors** page (Setup, Connectors). The Claude card at the top must say Signed in. Below it, every Claude connector is listed by popularity, with search.
 - The brain needs **Slack**, and works best with **Google Drive** (meeting notes), **Google Calendar**, the team's **issue tracker** (Linear or Jira) and **GitHub**. Ask which others they use.
 - For each one: if it shows "Not connected", tell the user to connect it at claude.ai (Settings, Connectors) or with `/mcp`, then press Check status. Press **Add**: the brain finds its read tools (never write tools), and its settings open:
   - **Role.** Watch: lead runs read it for new work. Lookup: only when an item or link needs it. Off. Defaults come from its category (messaging, email and trackers watch; design, CRM and docs look up).
@@ -56,9 +56,10 @@ An area is one part of their work with its own sources (for example `work`, or o
 - Set `default_area` in `config/brain.json` to the first area.
 
 ## 7. Schedules and the app
+- **Sandbox or test copy:** skip this step. Schedules would run leads in the background and spend usage; start the app by hand instead.
 - Show the jobs with `DRY=1 bin/install-schedules.sh`: the app, the lead and sync for each area, the daily distill, cleanup, ops report, stale alerts and the weekly UX review.
 - The user installs them themselves: tell them to run `bin/install-schedules.sh` (or `! bin/install-schedules.sh` in Claude Code). Do not run it for them.
-- Open http://127.0.0.1:7878 once the app job is loaded.
+- Open the app's address once the app job is loaded (`state/app.port` has the port).
 
 ## 8. First run
 Offer to run one lead pass now: `bin/run-lead.sh <area>`. When it finishes, walk the user through the queue: the Needs me list, a step's draft and its Send button (nothing is sent until they press it), Ask, the Agent panel, and the ⌘K palette. Explain the learning loop: every press, edit and note is logged, and the daily distill proposes brain rules from it for them to approve.

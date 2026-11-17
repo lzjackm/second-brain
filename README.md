@@ -49,3 +49,14 @@ Every scheduled run is a Claude Code session. A typical setup with one area cost
 ## License
 
 MIT. See `LICENSE`.
+
+## Try it in a sandbox
+
+To walk through setup without touching a brain you already run:
+
+```
+git clone https://github.com/<owner>/second-brain ~/second-brain-sandbox
+cd ~/second-brain-sandbox && claude
+```
+
+Then type `/onboard`. The sandbox keeps its own config, data, presses and port (the app takes the next free one), so nothing it does reaches your other brain. Skip step 7 (schedules) unless you want it running in the background. Delete the folder and `~/Library/Application Support/second-brain` to remove it. It uses your real Claude sign-in and connectors, read only; nothing is sent unless you press Send.

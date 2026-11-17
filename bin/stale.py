@@ -31,7 +31,7 @@ REMIND_DAYS = _cfg.get("remind_days", 3)
 INCLUDE_WAITING = _cfg.get("include_waiting", True)
 QUIET = tuple(_cfg.get("quiet_hours", [20, 9]))  # no notifications from 8 PM to 9 AM ET
 PENDING = {"todo", "queued", "failed"}
-APP = "http://127.0.0.1:7878"
+APP = "http://127.0.0.1:" + ((Path(__file__).resolve().parent.parent / "state" / "app.port").read_text().strip() if (Path(__file__).resolve().parent.parent / "state" / "app.port").exists() else "7878")
 
 
 def parse(ts):
