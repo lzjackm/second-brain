@@ -5,7 +5,7 @@
 # into a scratch folder, so no worktree or checkout of the owner's repo changes. Nothing is posted to GitHub here.
 # Usage: bin/pr-review.sh <number> [head-sha]
 set -euo pipefail
-export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+source "${0:A:h}/_env.zsh"
 ROOT="${0:A:h:h}"; N="$1"; HEAD="${2:-}"; PY=/opt/homebrew/bin/python3
 { IFS= read -r -d $'\0' REPO; IFS= read -r -d $'\0' SLUG; IFS= read -r -d $'\0' AREA; } < <($PY -I -c 'import sys; sys.path.insert(0, sys.argv[1]); import identity as i; sys.stdout.write("\0".join([i.LEDGER_PATH, i.LEDGER_REPO, i.LEDGER_AREA]) + "\0")' "$ROOT/bin")
 REPO=${~REPO}

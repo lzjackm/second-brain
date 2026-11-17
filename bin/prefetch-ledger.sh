@@ -4,7 +4,7 @@
 # (bin/pr_watch.py), and open-PR rows, the stale-row sweep and digest merge items are refreshed (bin/ledger_freshness.py).
 # Usage: bin/prefetch-ledger.sh   (run-lead.sh and pipeline.sh call it for the ledger's area)
 set -euo pipefail
-export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+source "${0:A:h}/_env.zsh"
 ROOT="${0:A:h:h}"
 PY=/opt/homebrew/bin/python3
 { IFS= read -r -d $'\0' REPO; IFS= read -r -d $'\0' SLUG; IFS= read -r -d $'\0' AREA; } < <($PY -I -c 'import sys; sys.path.insert(0, sys.argv[1]); import identity as i; sys.stdout.write("\0".join([i.LEDGER_PATH, i.LEDGER_REPO, i.LEDGER_AREA]) + "\0")' "$ROOT/bin")

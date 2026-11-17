@@ -6,7 +6,7 @@ set -euo pipefail
 ROOT="${0:A:h:h}"
 AREA="$1"
 cd "$ROOT"
-export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+source "${0:A:h}/_env.zsh"
 # One run per area at a time: the lead and the pipeline take the same lock (mkdir is atomic, so two runs that start in
 # the same second, as macOS does with missed schedules on wake, cannot both get it). A dead holder's lock is taken over.
 take_run_lock() {

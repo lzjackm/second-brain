@@ -40,7 +40,8 @@ LEDGER_FILES = re.compile(r"\.md$")
 os.umask(0o077)
 # The app starts this under launchd, whose PATH lacks Homebrew: gh and git must still be found (Nov 16: every PR step
 # crashed with "No such file: gh" and stayed Running).
-os.environ["PATH"] = "/opt/homebrew/bin:/usr/local/bin:" + os.environ.get("PATH", "/usr/bin:/bin")
+os.environ["PATH"] = ":".join([os.path.expanduser("~/.local/bin"), os.path.expanduser("~/.claude/local"), "/opt/homebrew/bin", "/usr/local/bin",
+                               os.environ.get("PATH", "/usr/bin:/bin")])   # same as bin/_env.zsh
 
 
 def now():

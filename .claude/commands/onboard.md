@@ -13,6 +13,7 @@ You are setting up a fresh copy of this repo as the user's second brain. Work th
   - Never write a key into any file here, and never paste one into the chat.
 - Tell them what a day costs: the Performance page shows each job's cost; on a plan it counts toward their usage limits.
 - Optional: `gh` (GitHub CLI, logged in) for PR features, `terminal-notifier` for notifications.
+- Run `bin/doctor.sh`. It checks everything the way scheduled runs see it (launchd's bare PATH, not this Terminal's): Python, where Claude Code is installed, the sign-in, GitHub CLI and required connectors. Fix every FIX line before going on; run it again after connecting connectors in step 4.
 - Run `bin/test.sh`. It must pass before going on.
 
 ## 2. Name the brain and its owner

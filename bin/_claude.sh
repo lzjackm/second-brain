@@ -18,7 +18,7 @@ if ! mkdir "$LOCK" 2>/dev/null; then
 fi
 echo $$ > "$LOCK/pid"
 trap 'rm -rf "$LOCK"' EXIT
-export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+source "$ROOT/bin/_env.zsh"   # PATH and CLAUDE, wherever Claude Code is installed
 TS=$(TZ=America/New_York date +%Y%m%d-%H%M)
 LOG="$ROOT/logs/$NAME-$TS.log"
 echo "$LOG" > "$ROOT/state/$NAME.current"   # the live trace, for the Talk panel and run views
@@ -49,6 +49,13 @@ alert() {  # title, body: a Mac notification the owner sees
 }
 # Every run uses the owner's own Claude Code sign-in (subscription, API key via their user settings, or a cloud provider):
 # nothing about the account lives in this repo. Signed out means no run can work: stop and say how to fix it.
+if [[ -z "$CLAUDE" ]]; then
+  echo "Claude Code not found on PATH ($PATH). Install it, or run bin/doctor.sh." > "$LOG"; cp "$LOG" "$LOG.err"
+  printf '{"ts": "%s", "run": "%s", "name": "%s", "job": "%s", "cost_usd": 0, "error": true, "error_short": "Claude Code not found"}\n' \
+    "$(date +%Y-%m-%dT%H:%M:%S%z | sed 's/\(..\)$/:\1/')" "$RUN_ID" "$NAME" "$JOB" >> "$ROOT/log/usage.jsonl"
+  alert "Claude Code not found" "Runs are paused: claude isn't on the PATH runs use. Run bin/doctor.sh in Terminal."
+  exit 1
+fi
 if ! claude auth status --json 2>/dev/null | grep -q '"loggedIn": *true'; then
   echo "Claude isn't signed in. Run \`claude auth login\` in Terminal, then rerun." > "$LOG"; cp "$LOG" "$LOG.err"
   printf '{"ts": "%s", "run": "%s", "name": "%s", "job": "%s", "cost_usd": 0, "error": true, "error_short": "Claude signed out"}\n' \

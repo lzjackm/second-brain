@@ -2,6 +2,15 @@
 
 Releases of the second-brain template. Run `/update-brain` to pull one in.
 
+## v0.5.1 (2026-11-17)
+
+Fresh-install fixes, from the first outside setup.
+- **Runs find Claude Code wherever it's installed.** Scheduled runs use a bare PATH that missed `~/.local/bin`, where the native installer puts `claude`, so every run said "Runs are paused" while you were signed in. One shared environment file (`bin/_env.zsh`) now sets PATH for every script.
+- **The right alert.** A missing `claude` now says "Claude Code not found", not "signed out".
+- **Connector discovery keeps prefixed tools.** Tools named like `slack_read_channel` were all dropped, and a shortened name could be stored. Discovery now takes the real tool names from the connector itself, classifies them in code by their verbs (writes are still refused), and never stores a name the connector doesn't have.
+- **`bin/doctor.sh`** checks setup the way the schedules see it (Python, where Claude Code is, sign-in, GitHub CLI, required connectors). `/onboard` runs it in step 1.
+- New tests: `tests/test_setup.py`.
+
 ## v0.5.0 (2026-11-17)
 
 Fixes found in daily use. Update if you press actions in the app.

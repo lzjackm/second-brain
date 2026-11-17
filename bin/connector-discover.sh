@@ -11,18 +11,28 @@ TMP="$ROOT/state/prompt-connector-$SERVER.md"
 sed "s|{{SERVER}}|$SERVER|g" "$ROOT/prompts/connector-discover.md" > "$TMP"
 JB_NO_CONNECTORS=1 "$ROOT/bin/_claude.sh" "connector-$SERVER" "$TMP" --model haiku --allowedTools "ToolSearch" --disallowedTools "Bash" "Write" "Edit" || true
 LOG=$(ls -t "$ROOT"/logs/connector-$SERVER-*.log(N) | head -1)
-RESULT=$($PY -I - "$LOG" <<'PY'
+RESULT=$($PY -I - "$LOG" "$SERVER" "$ROOT/bin" <<'PY'
 import json, re, sys
-text = open(sys.argv[1]).read() if sys.argv[1] else ""
+log, server, binp = sys.argv[1:4]
+sys.path.insert(0, binp)
+import connectors
+text = open(log).read() if log else ""
 m = re.search(r"\{.*\}", text, re.S)
 try:
     d = json.loads(m.group(0)) if m else {"error": "no answer"}
 except json.JSONDecodeError:
     d = {"error": "unreadable answer"}
-safe = re.compile(r"^(get|list|search|read|query|fetch|find|describe|view|whoami|lookup|retrieve)", re.I)
-d["read"] = [t for t in d.get("read") or [] if safe.match(t) and not re.search(r"(create|update|delete|send|post|write|upload|set|add|remove|archive|merge)", t, re.I)]
-if not d["read"] and not d.get("error"):
-    d["error"] = "no read-only tools found"
+# The tool names Claude Code really has for this connector: the tool search results in the run's trace.
+trace = open(log + ".trace.jsonl").read() if log else ""
+real = set(re.findall(r'"tool_reference",\s*"tool_name":\s*"(mcp__[^"]+)"', trace))
+if not real:
+    d = {"error": d.get("error") or "the connector's tools didn't load; connect it, then retry"}
+else:
+    d["read"], d["write"] = connectors.classify(server, real, d.get("read") if isinstance(d.get("read"), list) and d.get("read") else None)
+    if not d["read"]:
+        d["read"], _ = connectors.classify(server, real)       # the model's list matched nothing real: trust the names
+    if not d["read"] and not d.get("error"):
+        d["error"] = "no read-only tools found"
 print(json.dumps(d))
 PY
 )

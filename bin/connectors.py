@@ -114,6 +114,45 @@ def set_tools(server, read, write, state="done", error=""):
     save(conns)
 
 
+READ_WORDS = {"get", "list", "search", "read", "query", "fetch", "find", "describe", "discover", "view", "whoami", "lookup",
+              "retrieve", "count", "aggregate", "guidance", "download", "export", "session"}
+WRITE_WORDS = {"create", "update", "delete", "send", "post", "write", "upload", "set", "add", "remove", "archive", "merge",
+               "execute", "run", "manage", "share", "trash", "insert", "append", "import", "submit", "mark", "resolve",
+               "schedule", "invite", "assign", "move", "edit", "publish", "clear", "copy", "restore", "retire", "unshare",
+               "save", "respond", "patch", "put", "deploy", "cancel", "approve", "reject", "transfer", "pay", "sql"}
+
+
+STRONG_WRITE = WRITE_WORDS - {"post", "set", "add", "run", "move", "copy", "save", "put", "patch", "mark", "sql"}
+
+
+def is_read(tool):
+    """Read-only by its verb. The leading verb decides (a service prefix like `slack_` is skipped): a read verb is read
+    unless a strong write verb also appears (send, create, delete, execute...); a write verb is write. With neither
+    leading (conversational_search), any read word and no write word at all. Unknown names are not read."""
+    if tool.lower() in ("create_session",):     # Figma: opens a read session, nothing changes
+        return True
+    words = [w for w in re.split(r"[_\-.]+", tool.lower()) if w]
+    lead = next((w for w in words if w in READ_WORDS or w in WRITE_WORDS), None)
+    if lead in READ_WORDS and words.index(lead) <= 1:
+        return not (set(words) & STRONG_WRITE)
+    if lead in WRITE_WORDS and words.index(lead) <= 1:
+        return False
+    return bool(set(words) & READ_WORDS) and not set(words) & WRITE_WORDS
+
+
+def classify(server, real, model_read=None):
+    """Read tools of one connector. `real` = the tool names Claude Code actually listed for it (tool search results),
+    so a name the model shortened or invented is never stored. `model_read`, if given, narrows to what the model
+    judged read-only from the descriptions; its names are matched to real ones by suffix."""
+    prefix = f"mcp__{server}__"
+    names = sorted({r[len(prefix):] for r in real if r.startswith(prefix)})
+    picked = names
+    if model_read is not None:
+        want = {m.split("__")[-1] for m in model_read}
+        picked = [n for n in names if any(n == w or n.endswith("_" + w) for w in want)]
+    return [n for n in picked if is_read(n)], [n for n in names if not is_read(n)]
+
+
 def settings(server, new):
     """Apply the owner's settings from the Connectors page, checked field by field."""
     conns = registry()
