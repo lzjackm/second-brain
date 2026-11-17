@@ -2,6 +2,12 @@
 
 Releases of the second-brain template. Run `/update-brain` to pull one in.
 
+## v0.5.5 (2026-11-17)
+
+- **Solution Architect answers as short as the question.** The answer may run at most 1.2 times the client's words (50 to 160). The voice drops the greeting, closing question and casual fillers; every prompt and the checker carry the limit; code runs one hidden tightening pass on anything still over it.
+- **No AI-prose tics (S19).** Drafts and answers are scanned with the linter from the declauding skill (vendored in `bin/vendor/`, MIT): check K14 flags drafts, and Solution Architect answers with tics get the rewrite pass. Short chat messages aren't held to rhythm rules.
+- New tests: `tests/test_architect.py`, `tests/test_prose.py`.
+
 ## v0.5.4 (2026-11-17)
 
 - **Update without a slash command.** `bin/update.sh` does what `/update-brain` does from Terminal: shows what's new and the code that changes, asks before merging, merges the release tag, runs the tests and restarts the app.

@@ -32,4 +32,7 @@ if [[ -n "$ALOG" ]]; then
     (( $(stat -f %m "$VLOG" 2>/dev/null || echo 0) >= S2 )) || VLOG=""
   fi
 fi
-$PY -I "$ROOT/bin/architect.py" apply "$ID" "$ALOG" "$VLOG"
+OUT=$($PY -I "$ROOT/bin/architect.py" apply "$ID" "$ALOG" "$VLOG")
+# Over the length limit (V10): one automatic tightening pass, then the owner sees the result.
+[[ "$OUT" == *TIGHTEN* && -z "${ARCH_TIGHTENED:-}" ]] && ARCH_TIGHTENED=1 exec "$0" "$ID"
+true

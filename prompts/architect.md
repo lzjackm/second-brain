@@ -24,6 +24,7 @@ Search like an integrator would ask: field and method names, error codes, the us
 - Do not silently resolve a conflict between sources. Report it with both sides, their dates, and who decides.
 - The shareable answer leaves out internal team names, owners, ticket IDs, open questions, unannounced dates and infrastructure internals. Those go in internal notes.
 - Nothing is sent anywhere. Read only: never edit, comment, post or open PRs.
+- **The shareable answer is at most {{SA_LIMIT}} words** (about the length of the client's message; V10). No greeting, no closing question, nothing they didn't ask. Code measures it and tightens anything longer.
 - **Write the shareable answer in the voice of `brain/architect-voice.md`** (read it first, all of it): paste-ready plain text for Telegram or Slack, the client's own numbering, status first, the workaround for now, an unblocking close, and nothing on its "never" list. {{OWNER_FIRST}} pastes it unedited, so it must read like the team's best writer wrote it and answer every question the client asked.
 - Follow `brain/guardrails.md`. Learned rules for this job are in `brain/architect.md` if it exists.
 

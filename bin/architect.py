@@ -63,6 +63,19 @@ def sa_fill(tpl):
             .replace("{{SA_CONFLICTS}}", f"   - Is the topic listed in `{cf}` as a conflict?\n" if cf else ""))
 
 
+def words(t):
+    return len(re.findall(r"\S+", t or ""))
+
+
+def limit(q, turn):
+    """Longest the shareable answer may be (V10): about the client's own length, between 50 and 160 words."""
+    return max(50, min(160, round(1.2 * words(client_q(q, turn)))))
+
+
+def with_limit(tpl, q, turn):
+    return tpl.replace("{{SA_LIMIT}}", str(limit(q, turn)))
+
+
 def prompt(i, out):
     q = load(i)
     turn = q["turns"][-1]
@@ -73,7 +86,7 @@ def prompt(i, out):
         import knowledge  # noqa: E402
         know = "".join(f"\n\n## The owner's positions: {f.relative_to(ROOT)}\n" + re.sub(r"^---.*?---\n", "", f.read_text(), flags=re.S).strip()
                        for f, _ in knowledge.match(client_q(q, turn) + " " + turn["question"]))
-        Path(out).write_text(tpl.replace("{{NOW}}", now()).replace("{{DATE}}", now()[:10]).replace("{{QUESTION}}", client_q(q, turn))
+        Path(out).write_text(with_limit(tpl, q, turn).replace("{{NOW}}", now()).replace("{{DATE}}", now()[:10]).replace("{{QUESTION}}", client_q(q, turn))
                              .replace("{{ANSWER}}", json.dumps({k: base.get(k) for k in ("shareable_answer", "internal_notes", "claims", "questions", "conflicts", "gaps")}, indent=1, ensure_ascii=False))
                              .replace("{{FEEDBACK}}", turn["question"]) + know)
         return
@@ -88,7 +101,7 @@ def prompt(i, out):
     if know:
         ctx += "\nThe owner's positions on this topic (internal; never quote them to the client, but never contradict them):" + know + "\n"
     tpl = sa_fill((ROOT / "prompts" / "architect.md").read_text())
-    Path(out).write_text(tpl.replace("{{NOW}}", now()).replace("{{DEPTH}}", turn["depth"])
+    Path(out).write_text(with_limit(tpl, q, turn).replace("{{NOW}}", now()).replace("{{DEPTH}}", turn["depth"])
                          .replace("{{QUESTION}}", turn["question"]).replace("{{CONTEXT}}", ctx))
 
 
@@ -103,7 +116,7 @@ def verify_prompt(i, log, out):
     if turn.get("kind") == "revise":
         tpl = tpl.replace("## Do this", "## The owner's instructions for this rewrite (authoritative)\n" + turn["question"] +
                           "\n\nHonor them in your final answer and never undo them, including length and format limits. If one conflicts with answering every client question, fit the answers inside his limit (combine points) rather than breaking it.\n\n## Do this", 1)
-    Path(out).write_text(tpl.replace("{{NOW}}", now()).replace("{{QUESTION}}", client_q(q, q["turns"][-1]))
+    Path(out).write_text(with_limit(tpl, q, q["turns"][-1]).replace("{{NOW}}", now()).replace("{{QUESTION}}", client_q(q, q["turns"][-1]))
                          .replace("{{ANSWER}}", json.dumps(ans, indent=1, ensure_ascii=False)))
 
 
@@ -149,6 +162,22 @@ def apply(i, alog, vlog):
     final["unconfirmed"] = checks.architect_claims(final["claims"])  # K10
     turn["final"] = final
     q["status"] = "done"
+    over = words(final.get("shareable_answer")) - limit(q, turn)
+    import prose_lint  # noqa: E402  (declauding's linter)
+    tics = prose_lint.summary(final.get("shareable_answer") or "", 6)
+    if (over > 0 or tics) and not turn.get("auto_tighten"):
+        # V10 in code: an answer over the limit gets one automatic tightening pass before the owner reads it.
+        n = limit(q, turn)
+        q["turns"].append({"question": f"Cut the shareable answer to at most {n} words (it is {words(final.get('shareable_answer'))}). "
+                           "Keep every verdict, number and needed ask; drop greetings, closing questions, explanations the client "
+                           "didn't ask for, second options and follow-up promises (brain/architect-voice.md V02 to V10)."
+                           + (f" Also rewrite these AI-prose tics as plain statements (S19): {tics}." if tics else ""),
+                           "kind": "revise", "revises": len(q["turns"]) - 1, "depth": turn.get("depth", "quick"), "ts": now(),
+                           "pending": now(), "auto_tighten": True})
+        q["status"] = "working"
+        save(q)
+        print("TIGHTEN")
+        return
     save(q)
 
 

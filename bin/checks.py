@@ -30,7 +30,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "bin")) if str(ROOT / "bin") not in sys.path else None
 from identity import is_owner  # noqa: E402
 import identity  # noqa: E402
-import reply_gate  # noqa: E402  (config/brain.json)
+import reply_gate  # noqa: E402
+import prose_lint  # noqa: E402  (declauding's linter: AI prose tics, S19)  (config/brain.json)
 PENDING = {"todo", "queued", "failed"}
 SLANG = re.compile(r"\b(gm|gmgm|gn|pls|plz|lmk|ty|tysm|np|imo|ngl|btw|tbh|lol|ser|wagmi|fyi)\b|!{2,}|\b\d{1,2}(st|nd|rd|th)\b", re.I)
 
@@ -160,6 +161,9 @@ def run(item):
             probs = [p for t in external_copy(s) for p in register_problems(t)]
             if probs:
                 fail("K13", "block", "External copy reads like a chat: " + ", ".join(dict.fromkeys(probs)) + " (S18)", s)
+            text = " ".join(external_copy(s)) or (s.get("draft") or "")
+            if len(text.split()) >= 40 and prose_lint.tics(text):
+                fail("K14", "warn", "Reads like AI: " + prose_lint.summary(text) + " (S19)", s)
     ev = [e for e in (item.get("evidence") or []) + [e for s in steps for e in s.get("evidence") or []] if e]
     if not ev and item.get("status") in ("open", "waiting"):
         fail("K5", "warn", "No source recorded")

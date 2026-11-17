@@ -48,3 +48,6 @@ See `queue/SCHEMA.md`. One file per item. Reuse an open item with the same `key`
 - **Every run passes bin/tool_guard.py**: no secret files, no network shell commands, no git config tricks, no web fetches that could carry data out, no connector writes. The executor's single connector call gets the pressed arguments from the guard, never from a model.
 - **Python runs in bin/sandbox.sh** (no home folder outside ~/Projects, no Keychain); git runs through bin/gitread.sh (read only).
 - **The app** requires a per-launch token, its own origin and JSON on every API call; ids are checked before they become paths.
+
+## Writing
+Prose people will read follows `brain/style.md` S19 (no AI-prose tics). Interactive sessions run the `declauding` skill on drafts before handing them over; runs are checked in code by `bin/prose_lint.py` (its linter, vendored in `bin/vendor/`).

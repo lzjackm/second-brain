@@ -1549,7 +1549,7 @@ function archTurn(t, n) {
   const src = c => (c.sources || []).map(x => `<div class="src"><b>${esc(x.label || "")}</b> <span class="mono">${esc(x.ref || "")}</span>${x.date ? ` · ${esc(x.date)}` : ""}${x.quote ? `<div class="quote">“${esc(x.quote)}”</div>` : ""}</div>`).join("");
   const list = (lbl, xs, cls = "") => xs.length ? `<div class="inote ${cls}"><div class="lbl">${lbl}</div><ul>${xs.map(x => `<li>${x}</li>`).join("")}</ul></div>` : "";
   return `<div class="aturn">
-    <div class="msg me"><div class="bubble">${t.kind === "revise" ? `<div class="who">Change requested</div>` : ""}<div class="text">${esc(t.question)}</div></div></div>
+    ${t.auto_tighten ? "" : `<div class="msg me"><div class="bubble">${t.kind === "revise" ? `<div class="who">Change requested</div>` : ""}<div class="text">${esc(t.question)}</div></div></div>`}
     ${t.pending ? "" : t.error && !f ? `<div class="rec"><div class="txt" style="color:var(--bad)">${esc(firstSentence(t.error, 300))}</div></div>` : f ? `
     <div class="card acard">
       <div class="chead"><span class="k">Answer</span>${f.confidence ? `<span class="tag ${CONF[f.confidence] || ""}">${esc(f.confidence)} confidence</span>` : ""}
@@ -1585,7 +1585,7 @@ async function renderArchQ() {
     <div class="ltop"><button class="btn ghost sm" data-arch-back>${icon("undo")}Solution Architect</button><span class="grow"></span>${q.context ? `<span class="muted">${esc(q.context)}</span>` : ""}
       <button class="iconbtn" data-arch-fb="up" title="Good answer">${icon("up")}</button><button class="iconbtn" data-arch-fb="down" title="Not good: say why">${icon("down")}</button>
       <button class="iconbtn" data-arch-archive title="Archive">${icon("x")}</button></div>
-    <div id="arch-turns">${q.turns.map(archTurn).join("")}</div>
+    <div id="arch-turns">${q.turns.map((t, n, all) => all[n + 1]?.auto_tighten && !all[n + 1].pending ? "" : archTurn(t, n)).join("")}</div>
     <div id="arch-live">${archLive(q)}</div>
     ${(q.feedback || []).length ? `<div class="fblist">${q.feedback.map(f => `<div class="fbitem">${f.rating ? icon(f.rating) : ""}${(f.tags || []).map(g => `<span class="tag">${esc(g)}</span>`).join("")}${f.note ? `<span>${esc(f.note)}</span>` : ""}</div>`).join("")}</div>` : ""}
     <div class="askbox"><textarea id="arch-f" rows="2" placeholder="Follow-up question" ${q.busy ? "disabled" : ""}>${esc(draft)}</textarea>
