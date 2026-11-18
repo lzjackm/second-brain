@@ -70,3 +70,20 @@ class BrainEdit(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ApproveFix(unittest.TestCase):
+    def test_queues_the_spec_privately(self):
+        import json
+        import os
+        import press
+        d = Path(tempfile.mkdtemp())
+        saved = press.PRIVATE
+        press.PRIVATE = d
+        try:
+            result, _ = execute.do_approve_fix({"id": "i", "title": "Fix: x"}, {"id": "s1", "draft": "plain", "spec": "tech detail"})
+            rec = json.loads((d / "approved-fixes.jsonl").read_text().splitlines()[-1])
+            self.assertEqual(rec["spec"], "tech detail")
+            self.assertIn("Claude Code", result)
+        finally:
+            press.PRIVATE = saved

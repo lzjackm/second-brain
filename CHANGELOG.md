@@ -2,6 +2,13 @@
 
 Releases of the second-brain template. Run `/update-brain` to pull one in.
 
+## v0.5.7 (2026-11-18)
+
+- **Fix items you can read.** When the brain proposes a code fix, the item says what went wrong and what will change in plain words, with an **Approve fix** button. Approving queues the technical spec for your next Claude Code session in the brain's folder (`AGENTS.md`, Approved fixes). Drafts that read like an agent's spec are sent back to be rewritten.
+- **"What came of it?" only when there's an answer.** It shows for calls, meetings, questions and decisions, not for every step you mark done.
+- **Done elsewhere works without a note.** An empty note no longer does nothing; the lead checks the sources.
+- **Skip says what's left.** It tells you how many steps remain on the item and points to Dismiss for dropping the whole item.
+
 ## v0.5.6 (2026-11-17)
 
 - **Every page is in the sidebar.** Solution Architect and Meetings always show; until one is set up, its page says what it does and how to turn it on (in Claude Code: "set up the Solution Architect", or `/onboard` step 5).

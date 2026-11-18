@@ -477,8 +477,7 @@ def act(item_id, body):
                 press.record(item_id, step)   # the executor acts only on a press that matches the step exactly
                 run_executor = True
         elif action == "step_done_elsewhere":
-            if not note:
-                return 400, {"error": "Say where it was done, so the lead can reconcile it"}
+            # A note helps the lead find it; without one it searches the step's sources (Nov 18: an empty note did nothing).
             step.update(status="done_elsewhere", done_at=ts, done_by=OWNER, elsewhere_note=note)
             run_reviser = True
         elif action == "nudge":
@@ -547,8 +546,6 @@ def act(item_id, body):
             step.update(status="skipped", done_at=ts, skip_note=note)
     else:
         if action == "done_elsewhere":
-            if not note:
-                return 400, {"error": "Say where it was done, so the lead can reconcile it"}
             for s in steps:
                 if s.get("status", "todo") in PENDING:
                     s.update(status="done_elsewhere", done_at=ts, done_by=OWNER, elsewhere_note=note)

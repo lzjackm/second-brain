@@ -51,3 +51,6 @@ See `queue/SCHEMA.md`. One file per item. Reuse an open item with the same `key`
 
 ## Writing
 Prose people will read follows `brain/style.md` S19 (no AI-prose tics). Interactive sessions run the `declauding` skill on drafts before handing them over; runs are checked in code by `bin/prose_lint.py` (its linter, vendored in `bin/vendor/`).
+
+## Approved fixes
+When the owner presses Approve fix on a Fix item, its technical spec is queued in `~/Library/Application Support/<slug>/approved-fixes.jsonl` (outside the repo, so runs cannot add to it). An interactive Claude Code session in this folder starts by reading that file, lists the open fixes in one line each, and offers to implement them; it marks each one done in the file once shipped.

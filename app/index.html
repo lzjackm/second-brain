@@ -665,7 +665,7 @@ function category(i) {
   return { decide: "decision", approve_send: "reply" }[i.type] || "action";
 }
 function catTag(i) { const [l, k] = CATS[category(i)]; return `<span class="tag cat ${k}">${l}</span>`; }
-const VERB = { queue_update: "Apply updates", none: "Mark done", slack_send: "Send", slack_draft: "Save Slack draft", pr_merge: "Merge PR", pr_comment: "Post comment", pr_approve: "Approve PR", pr_request_changes: "Request changes", ledger_pr: "Add to ledger PR", brain_edit: "Add to brain", gdoc_create: "Create Google Doc", gsheet_write: "Write to sheet", calendar_event: "Send invite", email_draft: "Save email draft" };
+const VERB = { approve_fix: "Approve fix", queue_update: "Apply updates", none: "Mark done", slack_send: "Send", slack_draft: "Save Slack draft", pr_merge: "Merge PR", pr_comment: "Post comment", pr_approve: "Approve PR", pr_request_changes: "Request changes", ledger_pr: "Add to ledger PR", brain_edit: "Add to brain", gdoc_create: "Create Google Doc", gsheet_write: "Write to sheet", calendar_event: "Send invite", email_draft: "Save email draft" };
 const WHERE = { none: "", slack_send: "Sends in Slack", slack_draft: "Saves a Slack draft", pr_merge: "Merges the PR", pr_comment: "Comments on the PR", pr_approve: "Approves the PR on GitHub", pr_request_changes: "Requests changes on GitHub", ledger_pr: "Adds to your open rulings PR", brain_edit: "Adds a brain rule", gdoc_create: "Creates a Google Doc", gsheet_write: "Writes to a Google Sheet", calendar_event: "Sends a calendar invite", email_draft: "Saves a Gmail draft" };
 function consequence(s) {
   const k = s.execute?.kind || "none", where = s.execute?.target_label || "";
@@ -1261,7 +1261,7 @@ async function stepAct(action) {
   if (action === "revise_step" && !isOwner(s.owner)) return toast("Revise works on your steps", true);
   if (action === "take_back" && !(isAgent(s.owner) && s.status === "failed")) return;
   let note = "";
-  if (action === "step_done_elsewhere") { note = await ask({ title: isOwner(s.owner) || isAgent(s.owner) ? "Where did you do it?" : `Where did ${s.owner} do it?`, sub: "The lead finds it and links it.", placeholder: "Replied to Jordan in a DM around 1:40 PM" }); if (!note) return; }
+  if (action === "step_done_elsewhere") { note = await ask({ title: isOwner(s.owner) || isAgent(s.owner) ? "Where did you do it?" : `Where did ${s.owner} do it?`, sub: "Optional. A hint helps the lead find it and link it; without one it checks the step's sources.", placeholder: "Replied to Jordan in a DM around 1:40 PM", skip: "Mark done" }); if (note === null) return; }
   if (action === "agent_step" && !s.meeting_phase) return openTalk();
   if (action === "agent_step") { note = await ask({ title: "What should the agent do?", sub: "It does the work, writes a report and drafts your next step. Nothing is sent.", value: s.agent?.brief || s.text }); if (!note) return; }
   if (action === "revise_step") { note = await ask({ title: "What needs to change?", sub: "Rewrites the draft. Nothing is sent.", placeholder: "Plain words, no slide codes" }); if (!note) return; }
@@ -1273,12 +1273,14 @@ async function stepAct(action) {
   if (action === "do_step" && s.meeting_phase === "reconcile") {
     learned = await ask({ title: "How do these settle?", sub: "Say which is right for each, or what actually happened. The repo and queue updates are redrafted from your answer before anything is applied.", placeholder: "1: the notes are right. 2: mine; Taylor said Nov 20, not Nov 18", multiline: true });
     if (!learned) return;
-  } else if (action === "do_step" && (s.execute?.kind || "none") === "none" && isOwner(s.owner) && i.type !== "meeting" && (s.draft || "").trim()) {
+  } else if (action === "do_step" && (s.execute?.kind || "none") === "none" && isOwner(s.owner) && i.type !== "meeting" && (s.draft || "").trim()
+             && (s.ask_outcome || /\b(call|meet|meeting|ask|discuss|sync|talk|check with|decide|chat)\b/i.test(s.text || ""))) {
     // Only a call or question (the step has a talking point) has an answer worth asking for; anything else just closes.
     learned = await ask({ title: "Closing this step. What came of it?", sub: "This step was a call or question, so it may have an answer. A note records the outcome, redrafts your next step, and teaches the brain. Add one and save, Skip to close with no note, or Cancel to keep the step open.", placeholder: "Morgan owns the FAQ; final by Friday EOD", multiline: true, skip: "Skip" });
     if (learned === null) return;
   }
-  if (action === "skip_step") { note = await ask({ title: "Skip this step?", sub: "Optional reason.", placeholder: "Not needed" }); if (note === null) return; }
+  if (action === "skip_step") { const left = steps(i).filter(x => x !== s && (x.status || "todo") === "todo").length;
+    note = await ask({ title: "Skip this step?", sub: (left ? `Skips only this step; ${left} more step${left > 1 ? "s stay" : " stays"} on this item. To drop the whole item, use ⋯ then Dismiss.` : "This is the last step, so the item closes.") + " Optional reason.", placeholder: "Not needed", skip: "Skip" }); if (note === null) return; }
   const draft = $("draft")?.dataset.step === s.id ? $("draft").value : undefined;
   if (!(await post(i, { action, step_id: s.id, note: note || "", ...(override ? { override } : {}), ...(draft !== undefined ? { draft } : {}), ...(learned ? { learned } : {}) }))) return;
   const kind = s.execute?.kind || "none";
@@ -1287,7 +1289,7 @@ async function stepAct(action) {
 async function itemAct(action, extra = {}) {
   const i = current(); if (!i) return;
   let note = extra.note || "", who;
-  if (action === "done_elsewhere") { note = await ask({ title: "Where was this handled?", sub: "Closes every open step. The lead links what happened.", placeholder: "On the 2 PM call; replied in #product" }); if (!note) return; }
+  if (action === "done_elsewhere") { note = await ask({ title: "Where was this handled?", sub: "Closes every open step. Optional hint: the lead finds and links what happened either way.", placeholder: "On the 2 PM call; replied in #product", skip: "Mark done" }); if (note === null) return; }
   if (action === "waiting" || action === "delegate") {
     who = await ask({ title: action === "waiting" ? "Waiting on whom?" : "Delegate to whom?", placeholder: "Sam Lee", multiline: false }); if (!who) return;
     if (action === "waiting") { note = await ask({ title: `Waiting on ${who} for what?`, placeholder: "Confirms the dial-in", multiline: false }); if (note === null) return; }

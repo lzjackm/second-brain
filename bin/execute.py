@@ -344,7 +344,17 @@ def do_ledger(item, steps):
         body.unlink(missing_ok=True)
 
 
-KINDS = {"slack_send": do_slack, "slack_draft": do_slack, "pr_comment": do_pr, "pr_approve": do_pr,
+def do_approve_fix(item, step):
+    """The owner approved a fix the brain proposed: queue its spec for the next Claude Code session in this folder
+    (AGENTS.md: sessions start by offering the approved fixes). Kept outside the repo, where runs can't add to it."""
+    press._private()
+    rec = {"ts": now(), "item": item["id"], "title": item.get("title"), "summary": step.get("draft"), "spec": step.get("spec") or step.get("draft")}
+    with open(press.PRIVATE / "approved-fixes.jsonl", "a") as fh:
+        fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    return "Queued for your next Claude Code session here", ""
+
+
+KINDS = {"slack_send": do_slack, "approve_fix": do_approve_fix, "slack_draft": do_slack, "pr_comment": do_pr, "pr_approve": do_pr,
          "pr_request_changes": do_pr, "pr_merge": do_pr, "gdoc_create": do_gdoc, "gsheet_write": do_gsheet,
          "calendar_event": do_calendar, "brain_edit": do_brain_edit}
 

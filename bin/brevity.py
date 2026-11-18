@@ -57,6 +57,12 @@ def problems(item):
             prose = [l for l in draft.splitlines() if l.strip() and l not in pipes]
             if len(prose) > 5:
                 out.append(f"step {s['id']} draft has {len(prose)} lines of prose outside any table; at most 5, figures as a table")
+    for s in steps:   # text the owner reads must be plain words, not an agent's spec (Nov 18: a K9/K12 code spec as the draft)
+        if s.get("status", "todo") in PENDING and (s.get("execute") or {}).get("kind", "none") in ("none", "approve_fix"):
+            d = s.get("draft") or ""
+            code = len(re.findall(r"`[^`]+`|\\b|\b[\w/-]+\.(?:py|json|md|sh|zsh|html)\b|\b[a-z]+_[a-z_]+\b|\bK\d{1,2}\b|\[[^\]]*\|[^\]]*\]", d))
+            if code >= 4:
+                out.append(f"step {s['id']} draft reads like an agent spec ({code} code terms); write at most three plain lines for the owner and move the detail to the step's `spec`")
     if any(s.get("status", "todo") in PENDING for s in steps):
         t = wordset(item.get("title"))
         for s in steps:
