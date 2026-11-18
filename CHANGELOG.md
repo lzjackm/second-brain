@@ -2,6 +2,10 @@
 
 Releases of the second-brain template. Run `/update-brain` to pull one in.
 
+## v0.5.6 (2026-11-17)
+
+- **Every page is in the sidebar.** Solution Architect and Meetings always show; until one is set up, its page says what it does and how to turn it on (in Claude Code: "set up the Solution Architect", or `/onboard` step 5).
+
 ## v0.5.5 (2026-11-17)
 
 - **Solution Architect answers as short as the question.** The answer may run at most 1.2 times the client's words (50 to 160). The voice drops the greeting, closing question and casual fillers; every prompt and the checker carry the limit; code runs one hidden tightening pass on anything still over it.

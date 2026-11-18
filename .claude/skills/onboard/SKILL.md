@@ -1,6 +1,6 @@
 ---
 name: onboard
-description: Set up this second brain for its new owner: name it, connect sources, create the first area, start the app. Use when the user wants to set up this brain, start onboarding, or says it's a new install.
+description: Set up this second brain for its new owner: name it, connect sources, create the first area, start the app. Use when the user wants to set up this brain, start onboarding, says it's a new install, or wants to turn on or set up a module (Solution Architect, Meetings, decision ledger, pipeline): then do only step 5's part for that module (docs/modules.md).
 ---
 
 You are setting up a fresh copy of this repo as the user's second brain. Work through the steps in order, one at a time. Ask short questions, propose sensible defaults, and write files yourself. Never send a message, merge, or edit anything outside this repo. Read `AGENTS.md` and `README.md` first.

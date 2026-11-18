@@ -687,7 +687,13 @@ function consequence(s) {
 }
 // Module pages show only when config/brain.json enables them (modules.meetings, modules.architect).
 const VIEWS_ALL = [["queue", "Needs me", "inbox"], ["progress", "In progress", "loader"], ["waiting", "Waiting", "hourglass"], ["done", "Done", "check"], ["meetings", "Meetings", "calendar"], ["learn", "Learn", "book"], ["architect", "Solution Architect", "compass"], ["synopsis", "Synopsis", "file"], ["stats", "Performance", "chart"], ["connectors", "Connectors", "plug"]];
-const VIEWS = VIEWS_ALL.filter(([k]) => !["meetings", "architect"].includes(k) || (k === "meetings" ? CFG.modules?.meetings : CFG.modules?.architect));
+const VIEWS = VIEWS_ALL;  // module pages always show; one that isn't set up yet explains how (moduleSetup)
+function moduleSetup(title, what, how) {
+  $("detail").innerHTML = `<div class="page" style="max-width:760px"><div class="h">${title}</div>
+    <div class="soft" style="font-size:14px">${what}</div>
+    <div class="card" style="padding:16px 18px;margin-top:4px"><div class="cs-k" style="margin-bottom:6px">Not set up yet</div>
+      <div style="font-size:14px;line-height:1.55">${how}</div></div></div>`;
+}
 const LISTS = ["queue", "progress", "waiting", "done"];
 const VIEW_OF = { open: "queue", working: "progress", reconciling: "progress", waiting: "waiting", snoozed: "waiting", done: "done", dismissed: "done", delegated: "done", stale: "done" };
 const STATUS = { open: ["", "Needs me"], working: ["warn", "In progress"], reconciling: ["info", "Reconciling"], waiting: ["", "Waiting"], snoozed: ["warn", "Snoozed"], done: ["ok", "Done"], dismissed: ["bad", "Dismissed"], delegated: ["info", "Delegated"], stale: ["", "Stale"] };
@@ -1527,6 +1533,9 @@ const ARCH_TAGS = ["Wrong facts", "Missed a source", "Outdated", "Too long", "No
 const CONF = { high: "ok", medium: "warn", low: "bad" };
 function renderArchitect() { return state.arch.id ? renderArchQ() : renderArchHome(); }
 async function renderArchHome() {
+  if (!CFG.modules?.architect) return moduleSetup("Solution Architect",
+    "Paste a client's or partner's question. It searches your specs, docs and repos in the order you trust them, a second agent checks every claim against its source, and you get a short, paste-ready answer.",
+    "In Claude Code, in this folder, say <b>set up the Solution Architect</b> (or run <code>/onboard</code> and pick it in step 5). It asks which repos hold your specs and docs and in what order to trust them, then adds <code>modules.architect</code> to <code>config/brain.json</code>. Reload this page when it's done. Details: <code>docs/modules.md</code>.");
   const { questions } = await (await fetch("/api/architect")).json(), A = state.arch;
   $("detail").innerHTML = `<div class="page" id="arch-page" style="max-width:960px">
     <div class="h">Solution Architect</div>
@@ -1803,6 +1812,9 @@ function layoutDay(evs) {
   return out;
 }
 async function renderMeetings() {
+  if (!CFG.modules?.meetings) return moduleSetup("Meetings",
+    "Your week from Google Calendar. Before a meeting, it drafts an agenda from what each attendee owes or is waiting on; after it, it reconciles your notes with the meeting notes and proposes the queue updates.",
+    "Connect <b>Google Calendar</b> on the Connectors page, then set <code>\"meetings\": true</code> under <code>modules</code> in <code>config/brain.json</code> (or say <b>turn on Meetings</b> to Claude Code in this folder). Reload this page.");
   const week = weekOf(), r = await (await fetch("/api/meetings?week=" + week)).json(); state.mtg.data = r;
   if (state.view !== "meetings") return;
   const today = ymd(etNow()), M = state.mtg;
