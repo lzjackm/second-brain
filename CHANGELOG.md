@@ -2,6 +2,15 @@
 
 Releases of the second-brain template. Run `/update-brain` to pull one in.
 
+## v0.5.8 (2026-11-18)
+
+- **The pipeline feeds the lead.** With `modules.pipeline` on, a scout lists what's new in every watched connector (each from its own read window), specialists research and write proposals, and the lead runs as editor: it decides what reaches your queue with the full thread, queue and rules in view, applies updates, checks your DMs and mentions for anything missed, and writes the synopsis. The lead's own sweep stands down. `bin/pipeline_review.py` compares a week before and after.
+- **Sync backs off quiet items:** checked every 30 minutes while active, hourly after 2 quiet checks, every 2 hours after 4; activity resets it, and a run with nothing due doesn't start.
+- **Waiting items find their answers.** For each step waiting on someone, sync also searches that person's messages, DMs and email, not just the linked thread.
+- **Leaner screens (unslop-ui pass):** no subtitle repeating the item title, no page intros, no blurb under every connector, no zero counts in the synopsis header.
+- **Meetings refresh every weekday** at 9 AM (was Mondays only); rerun `bin/install-schedules.sh` to pick it up.
+- The app finds the native Claude Code install first, like the runs.
+
 ## v0.5.7 (2026-11-18)
 
 - **Fix items you can read.** When the brain proposes a code fix, the item says what went wrong and what will change in plain words, with an **Approve fix** button. Approving queues the technical spec for your next Claude Code session in the brain's folder (`AGENTS.md`, Approved fixes). Drafts that read like an agent's spec are sent back to be rewritten.

@@ -3,10 +3,11 @@ You keep {{OWNER}}'s open queue items current with what has happened since they 
 ## Before anything
 Read `AGENTS.md`, `brain/guardrails.md`, `brain/style.md`, `brain/mediums.md`, `queue/SCHEMA.md`. {{OWNER_FIRST}}'s Slack identity: {{OWNER}} (find his user ID once with `slack_search_users` if a thread needs it).
 
-## For each item in `queue/items/` with area `{{AREA}}` and status `open`, `waiting` or `working`
+## For each item listed under "Items to check this run" at the end of this prompt (area `{{AREA}}`)
 1. Collect its threads: every Slack link in item and step `evidence`, and every step `execute.target` with a channel and thread_ts. Also PRs and docs it links.
 2. Read each thread for messages after the item's `synced_at` (or `updated`, if never synced). Note who said what. Thread replies count: for every linked message, call `slack_read_thread` on its thread (use `thread_ts` from the link, or the message's own ts if it has replies), not only `slack_read_channel`; {{OWNER_FIRST}} often answers inside a thread, including in DMs.
-3. Decide, per open step, using only what the thread shows:
+   **Waiting on someone else:** answers rarely come back in the linked thread. For each open step owned by someone other than {{OWNER_FIRST}}, also search since the item's `synced_at` (or the day the step was added): Slack `from:` that person with two or three of the step's key words, their DMs and group DMs with {{OWNER_FIRST}}, and email from them if Gmail is connected. Meeting notes in Drive count too when the item names a meeting. A reply anywhere is evidence; link it.
+3. Decide, per open step, using what the threads and these searches show:
    - **{{OWNER_FIRST}} already did it** (he replied, decided, sent the thing, merged): set the step `done`, `done_by` `{{OWNER_TOKEN}}`, `done_at` (his message time), `evidence` (his message link), `result` one line ("You replied in the thread at 2:14 PM"). Never send anything.
    - **Someone else did their step**: same, with `done_by` that person.
    - **His reply changed the plan** (new decision, new ask, a different answer than the draft assumed): close what his reply covered, then rewrite the remaining steps and drafts to match where things now stand; add steps if his reply created new work (for him or for someone he asked). Update `context` and `recommendation_short`.

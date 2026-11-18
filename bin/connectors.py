@@ -66,7 +66,7 @@ def defaults(name):
 def status():
     """Every connector Claude Code sees, with its state. `claude mcp list` prints 'claude.ai Name: url - ✔ Connected'."""
     import os, shutil
-    exe = shutil.which("claude") or next((p for p in ("/opt/homebrew/bin/claude", "/usr/local/bin/claude", os.path.expanduser("~/.local/bin/claude"), os.path.expanduser("~/.claude/local/claude")) if os.path.exists(p)), "claude")
+    exe = claude_exe() or "claude"   # launchd's PATH lacks Homebrew and ~/.local/bin
     out = subprocess.run([exe, "mcp", "list"], capture_output=True, text=True, timeout=90).stdout  # launchd's PATH lacks Homebrew
     found = []
     for line in out.splitlines():
@@ -197,14 +197,14 @@ def _commit_pending(area):
         pend.unlink()
 
 
-def sources(area=None, mode="lead"):
+def sources(area=None, mode="lead", started=None):
     live = [c for c in registry() if role(c) != "off" and c.get("read_tools") and (not area or not c.get("areas") or area in c["areas"])]
     use = lambda c: c.get("use") or "anything relevant to the open items and the owner"
     head = ["## Connected sources", "", "Read only; write tools are not available to you.", ""]
     if mode != "lead" or not area:
         return "\n".join(head + [f"- **{c['name']}**: {use(c)}." for c in live]) + "\n"
     _commit_pending(area)
-    now = datetime.now(TZ)
+    now = datetime.fromisoformat(started) if started else datetime.now(TZ)
     reads = _reads().get(area, {})
     watch, look = [], []
     for c in live:
@@ -270,8 +270,9 @@ def stats(days=7):
 
 
 def claude_exe():
-    return shutil.which("claude") or next((p for p in ("/opt/homebrew/bin/claude", "/usr/local/bin/claude", os.path.expanduser("~/.local/bin/claude"),
-                                                       os.path.expanduser("~/.claude/local/claude")) if os.path.exists(p)), "")
+    # Same order as bin/_env.zsh: the native install first, so the app reports the claude its runs use.
+    return next((p for p in (os.path.expanduser("~/.local/bin/claude"), os.path.expanduser("~/.claude/local/claude"),
+                             "/opt/homebrew/bin/claude", "/usr/local/bin/claude") if os.path.exists(p)), shutil.which("claude") or "")
 
 
 def claude():
@@ -296,7 +297,7 @@ if __name__ == "__main__":
     elif cmd == "required":
         print("\n".join(c["name"] for c in registry() if c.get("required") and role(c) == "watch"))
     elif cmd == "sources":
-        print(sources(*(sys.argv[2:4])))
+        print(sources(*(sys.argv[2:5])))
     elif cmd == "settings" and len(sys.argv) == 4:
         sys.exit(0 if settings(sys.argv[2], json.loads(sys.argv[3])) else 1)
     elif cmd == "stats":

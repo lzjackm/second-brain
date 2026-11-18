@@ -933,7 +933,8 @@ function checkLines(i, s) {
 // Where the item came from, shown on every card: the first Slack link (thread), else the first source of any kind.
 /* Sources in plain words: "Sam Slack DM", "PR #12", "Handoff tracker". The full label is the hover title. */
 // Two lines that say the same thing (a step named like its item) show once.
-function sameText(a, b) { const w = t => new Set(String(t).replace(/<[^>]+>/g, "").toLowerCase().match(/[a-z0-9']+/g) || []); const A = w(a), B = w(b); const common = [...A].filter(x => B.has(x)).length; return common >= Math.min(A.size, B.size) * 0.8; }
+const STOPW = new Set("a an the to of on in for and or with by is be your you it its that this as at from end day".split(" "));
+function sameText(a, b) { const w = t => new Set((String(t).replace(/<[^>]+>/g, "").toLowerCase().match(/[a-z0-9']+/g) || []).filter(x => !STOPW.has(x))); const A = w(a), B = w(b); const common = [...A].filter(x => B.has(x)).length; return common >= Math.min(A.size, B.size) * 0.6; }
 function trunc(t, n) { t = (t || "").trim(); if (t.length <= n) return t; const c = t.slice(0, n); return c.slice(0, Math.max(c.lastIndexOf(" "), n - 8)).replace(/[\s,;:·-]+$/, "") + "…"; }
 function shortSrc(e) {
   const u = e.url || "", l = (e.label || "").replace(/\d{4}-\d{2}-\d{2}T[\d:.+-]+/g, "").replace(/\b\d{1,2}[-/]\d{1,2}(\s+\d{1,2}:\d{2}\s*(AM|PM)?(\s*ET)?)?/gi, "").replace(/\s+/g, " ").trim();
@@ -1346,7 +1347,7 @@ async function renderSynopsis(date) {
   const s = await (await fetch("/api/synopsis")).json(), d = date || s.dates[0];
   const text = date ? (await (await fetch("/api/synopsis/" + date)).json()).text : s.latest;
   const today = d === s.dates[0], need = count("queue"), wait = count("waiting"), prog = count("progress");
-  const summary = today ? `<div class="today-line"><b>${need ? `${need} need${need === 1 ? "s" : ""} you` : "Nothing needs you"}</b> · ${wait} waiting on others · ${prog} in progress · ${state.today} cleared today</div>` : "";
+  const summary = today ? `<div class="today-line"><b>${need ? `${need} need${need === 1 ? "s" : ""} you` : "Nothing needs you"}</b>${[wait && `${wait} waiting`, prog && `${prog} in progress`, state.today && `${state.today} cleared today`].filter(Boolean).map(x => " · " + x).join("")}</div>` : "";
   $("detail").innerHTML = `<div class="page"><div class="h">Synopsis</div><div class="chips">${s.dates.map(x => `<button class="chip ${x === d ? "on" : ""}" data-syn="${x}">${fmtDate(x)}</button>`).join("")}</div>${summary}<div class="md" id="syn">${text ? md(text) : "<p>No synopsis yet. Each lead run writes one.</p>"}</div></div>`;
   // Long lists show their first 5; the rest is one click away.
   document.querySelectorAll("#syn ul").forEach(ul => {
@@ -1398,7 +1399,6 @@ async function renderCodex() {
     <form class="teach" data-teach>${icon("bulb")}<input id="teach-in" placeholder="Teach me about…" autocomplete="off">
       <label><input type="checkbox" data-mastery ${state.learn.mastery ? "checked" : ""}> Full mastery</label>
       <button class="btn primary sm" type="submit">${icon("play")}Start</button></form>
-    <div class="soft" style="font-size:13px">A short diagnostic, then one question at a time. Levels are earned, not given.</div>
     ${due.length ? `<div class="rec"><div class="txt"><strong>Due for review:</strong> ${due.map(t => `<button class="chip" data-lquiz="${esc(t.slug)}">${esc(t.topic)} · ${t.due}</button>`).join(" ")}</div></div>` : ""}
     <div class="h" style="font-size:18px; margin-top:8px">Codex</div>
     ${topics.length ? `<div class="codex">${topics.map(t => `<button class="ccard" data-ltopic="${esc(t.slug)}">
@@ -1541,7 +1541,6 @@ async function renderArchHome() {
   const { questions } = await (await fetch("/api/architect")).json(), A = state.arch;
   $("detail").innerHTML = `<div class="page" id="arch-page" style="max-width:960px">
     <div class="h">Solution Architect</div>
-    <div class="soft" style="font-size:13px">${esc(CFG.modules?.architect?.description || "Paste a client's question. It searches your docs, specs and repos, then a second agent checks every claim against its source.")}</div>
     <div class="askbox">
       <textarea id="arch-q" rows="4" placeholder="${esc(CFG.modules?.architect?.placeholder || "Paste the client's question")}"></textarea>
       <div class="bar"><input class="text" id="arch-ctx" placeholder="Client or context (optional)" style="flex:1; min-width:180px">
@@ -2018,13 +2017,12 @@ async function renderConnectors() {
   const scroll = $("detail").scrollTop, hadFocus = document.activeElement?.id === "conn-q";
   $("detail").innerHTML = `<div class="page conn">
     <div class="h">Connectors</div>
-    <div class="soft">What your brain reads, always read only. Watch connectors are read by lead runs for new work, each since it was last read; Lookup connectors only when an item needs them. Add one, set it up, and run a test read to see what it would bring in. Sign-in for each happens at claude.ai.</div>
     ${claudeCard(r.claude)}
     <div class="cmine"><span class="mp-k">In your brain (${mine.length})</span><div class="cchips">${mine.map(chip).join("") || '<span class="muted">None yet</span>'}</div></div>
     <div class="cbar"><input class="text" id="conn-q" placeholder="Search connectors" value="${esc(C.q)}"><button class="btn sm" data-conn-refresh ${r.checking ? "disabled" : ""}>${r.checking ? "Checking…" : "Check status"}</button></div>
     <div class="clist">${rows.map(c => { const [k, l] = STATE[c.state] || STATE.not_connected; return `<div class="crow ${c.added ? "on" : ""}">
       <span class="clogo">${esc(c.name[0])}</span>
-      <div class="cmain"><div class="cname">${esc(c.name)}<span class="ccat">${esc(c.category || "")}</span></div><div class="cabout">${esc(c.about || c.use || "")}</div>${c.added ? connSummary(c) : ""}</div>
+      <div class="cmain"><div class="cname">${esc(c.name)}<span class="ccat">${esc(c.category || "")}</span></div>${c.added ? connSummary(c) : ""}</div>
       <span class="cstate"><span class="rd ${k}"></span>${l}</span>
       ${c.state !== "connected" ? `<a class="btn ghost sm" href="${safeUrl(r.connect_url)}" target="_blank" rel="noopener" title="Sign in to ${esc(c.name)} at claude.ai">Connect</a>` : ""}
       ${action(c)}</div>`; }).join("") || '<div class="muted">No connector matches.</div>'}</div>
@@ -2041,14 +2039,14 @@ function claudeCard(cl) {
   if (!cl.logged_in) return `<div class="claude">${head}<div class="cmain"><div class="cname">Claude isn't signed in <span class="chip warn">Runs paused</span></div><div class="cabout">Run <code>claude auth login</code> in Terminal and sign in with your Claude account (any paid plan) or an Anthropic Console account. Then check again.</div></div><button class="btn sm" data-conn-refresh>Check again</button></div>`;
   const how = cl.method === "claude.ai" ? `${esc(cl.plan ? cl.plan[0].toUpperCase() + cl.plan.slice(1) : "Claude")} plan` : cl.provider && cl.provider !== "firstParty" ? esc(cl.provider) : "API key";
   return `<div class="claude">${head}<div class="cmain"><div class="cname">Claude<span class="ccat">Claude Code ${esc(cl.version || "")}</span></div>
-    <div class="cabout">Runs use your sign-in: ${esc(cl.account || "")}${cl.org ? " · " + esc(cl.org) : ""} · ${how}. Your account and keys stay with Claude Code; nothing is stored in this brain.</div></div>
+    <div class="cabout">Signed in as ${esc(cl.account || "")}${cl.org ? " · " + esc(cl.org) : ""} · ${how}</div></div>
     <span class="cstate"><span class="rd ok"></span>Signed in</span></div>`;
 }
 function connSummary(c) {
   if (!c.role) return "";
-  const areas = c.areas?.length ? c.areas.join(", ") : "all areas", st = c.stats || {};
-  const bits = [ROLE[c.role][0] + (c.role === "watch" ? " · " + (c.cadence === "daily" ? "once a day" : "every run") : ""), areas,
-    st.items != null ? `${st.items} items, ${st.calls_per_day || 0} reads a day (7 days)` : ""].filter(Boolean);
+  const st = c.stats || {};
+  const bits = [ROLE[c.role][0] + (c.role === "watch" ? (c.cadence === "daily" ? " once a day" : " every run") : ""), c.areas?.length ? c.areas.join(", ") : "",
+    st.items ? `${st.items} items this week` : ""].filter(Boolean);
   return `<div class="cset">${bits.map(esc).join(" · ")}${c.suggest_lookup ? ` <span class="chip warn" data-conn-quiet="${esc(c.name)}" title="No items from it in 7 days">Quiet: switch to Lookup?</span>` : ""}</div>`;
 }
 function renderSheet() {
