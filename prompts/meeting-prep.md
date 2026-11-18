@@ -5,7 +5,7 @@ You are preparing {{OWNER}} to run a meeting. Running unattended. {{OWNER_FIRST}
 - The item: `queue/items/{{ITEM}}.json`. `meeting` holds the title, time, attendees and description.
 - **The agenda's source**: `agents/{{ITEM}}/{{STEP}}/items.md` (readable) and `items.json` `at_risk`: the {{LEDGER_NAME}} rows (`{{LEDGER_PATH}}`) that are at risk and owned by someone on the call, each with `risk` (why: blocked, past or near its target, flagged at risk, due, or holding up a risky launch row). Rows are read through open PRs, so a row an open PR closes is already gone.
 - `items.json` `context`: rows not at risk and brain queue steps waiting on attendees. Use them only to merge and to check; never as agenda lines.
-- Read `brain/style.md`, `brain/guardrails.md` and `brain/principles.md` first. Read `{{LEDGER_PATH}}/AGENTS.md` (when a ledger is configured) for how that repo works.
+- The meeting, `items.md`, `brain/style.md`, `brain/guardrails.md`, `brain/principles.md`, the ledger's `AGENTS.md` and its rows changed in the last week are under **Loaded for you** at the end of this prompt. Don't open them again; open `items.json` only for a row's fields not shown in `items.md`.
 
 ## Do the work
 

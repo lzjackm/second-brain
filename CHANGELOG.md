@@ -2,6 +2,12 @@
 
 Releases of the second-brain template. Run `/update-brain` to pull one in.
 
+## v0.5.9 (2026-11-18)
+
+- **Faster meeting agendas.** Prep starts with the meeting, the agenda's source rows, your rules and the ledger's recent changes already in its brief, and checks the at-risk rows' status in up to three parallel lanes before one run writes the agenda (about 2 minutes, was 4 to 7).
+- **The agenda shows when it's ready.** It opens expanded, and it loads as soon as the run finishes, without a page refresh.
+- **Solution Architect answers stand alone.** Notes, reviewer flags, gaps and coverage fold into one closed "Reasoning and checks" section; its summary counts anything to check before sending.
+
 ## v0.5.8 (2026-11-18)
 
 - **The pipeline feeds the lead.** With `modules.pipeline` on, a scout lists what's new in every watched connector (each from its own read window), specialists research and write proposals, and the lead runs as editor: it decides what reaches your queue with the full thread, queue and rules in view, applies updates, checks your DMs and mentions for anything missed, and writes the synopsis. The lead's own sweep stands down. `bin/pipeline_review.py` compares a week before and after.

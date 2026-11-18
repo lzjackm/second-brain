@@ -305,7 +305,7 @@ body:not(.chat-open) #drawer { box-shadow: none; visibility: hidden; transition:
 .arow .aq { font-weight: 500; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; } .arow .meta { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--ink-3); }
 .aturn { display: flex; flex-direction: column; gap: 12px; margin-bottom: 8px; }
 .acard .ans { font-size: 15px; } .acard .ans p { color: var(--ink); } .acard .ans.plain { white-space: pre-wrap; line-height: 1.55; color: var(--ink); }
-.qcov { display: flex; flex-wrap: wrap; gap: 6px; }
+.qcov { display: flex; flex-wrap: wrap; gap: 6px; } .flagc { color: var(--warn); }
 .inote { border-left: 2px solid var(--line-strong); padding: 2px 0 2px 12px; font-size: 13px; color: var(--ink-2); } .inote .lbl { font-size: 12px; color: var(--ink-3); font-weight: 500; margin-bottom: 4px; }
 .inote.warn { border-left-color: var(--warn); } .inote.bad { border-left-color: var(--bad); } .inote ul { margin: 4px 0; padding-left: 18px; } .inote p { margin: 4px 0; }
 .claim { padding: 8px 0; border-top: 1px solid var(--line-soft); font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
@@ -1566,6 +1566,9 @@ function archTurn(t, n) {
         <span class="muted" style="font-size:12px">${f.verified ? (tally.map(([k, v]) => `${v} ${k}`).join(" · ") || "checked") : "not checked by the reviewer"}</span><span class="grow"></span>
         <button class="btn ghost sm" data-arch-modify="${n}">${icon("pen")}Modify</button><button class="btn ghost sm" data-arch-copy="${n}">${icon("copy")}Copy</button></div>
       <div class="cbody"><div class="ans plain">${esc(f.shareable_answer || "")}</div>
+        ${(() => {  // closed by default; the summary says when something needs a look before sending
+          const flags = (f.leaks || []).length + (f.unconfirmed || []).length + (f.conflicts || []).length + (f.questions || []).filter(x => x.answered !== "yes").length;
+          return `<details class="hood"><summary>Reasoning and checks${flags ? ` · <span class="flagc">${flags} to check before sending</span>` : ""}</summary>
         ${(f.questions || []).length ? `<div class="qcov">${f.questions.map(x => `<span class="tag ${x.answered === "yes" ? "ok" : x.answered === "partly" ? "warn" : "bad"}" title="${esc(x.where || "")}">${esc(firstSentence(x.q, 60))}</span>`).join("")}</div>` : ""}
         ${(f.missing_questions || []).length ? `<div class="inote warn"><div class="lbl">Reviewer added answers the first draft skipped</div><ul>${f.missing_questions.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
         ${f.internal_notes ? `<div class="inote"><div class="lbl">For you, not the client</div>${md(f.internal_notes)}</div>` : ""}
@@ -1575,6 +1578,7 @@ function archTurn(t, n) {
         ${list("Not answered by any source", (f.gaps || []).map(esc))}
         ${list("Not confirmed in an ADR, spec or code", (f.unconfirmed || []).map(c => esc(c.msg)), "warn")}
         ${list("Worth asking the client", (f.client_questions || []).map(esc))}
+        </details>`; })()}
         <details class="hood"><summary>Claims and sources (${claims.length})</summary>${claims.map(c => `<div class="claim"><div><span class="tag ${{ confirmed: "ok", revised: "warn", refuted: "bad", unsupported: "bad" }[c.outcome] || ""}">${esc(c.outcome || "unchecked")}</span> ${esc(c.text)}${c.shareable === false ? ' <span class="muted">(internal)</span>' : ""}</div>${c.review ? `<div class="muted" style="font-size:12px">${esc(c.review)}</div>` : ""}${src(c)}</div>`).join("")}</details>
         <details class="hood"><summary>What was searched (${(f.searched || []).length})</summary><ul class="md">${(f.searched || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul></details>
       </div></div>` : ""}
@@ -1747,7 +1751,7 @@ function mtgBody(ev) {
   if (st.phase?.endsWith("_failed")) return `${people}<div class="inote bad">${esc(st.error)}</div><div style="display:flex;gap:8px"><button class="btn sm" data-mtg-retry="${esc(st.id)}">${icon("undo")}Retry</button>${item}</div>${st.agenda ? `<details class="hood"><summary>Agenda</summary>${mtgAgenda(st, false)}</details>` : ""}`;
   if (st.phase === "updates") return `${people}<div style="display:flex;gap:8px;align-items:center"><span class="tag ok">Notes read</span>${st.open_steps ? `<span>${st.open_steps} to apply</span>` : `<span class="muted">${st.steps?.length ? "Everything applied" : "Nothing to update"}</span>`}</div>
     ${(st.steps || []).map(x => mtgStep(st.id, x)).join("")}${rep("s3")}<details class="hood"><summary>Agenda</summary>${mtgAgenda(st, false)}</details>`;
-  return `${people}<div style="display:flex;gap:8px;align-items:center"><span class="grow" style="flex:1"></span>${item}<button class="btn ghost sm" data-mtg-redraft="${esc(st.id)}" title="Draft the agenda again from the latest sources; your notes stay">${icon("undo")}Redraft agenda</button><button class="btn sm" data-mtg-done="${esc(st.id)}" title="Reads the meeting notes and proposes updates to every item">${icon("check")}Meeting done: update items</button></div><details class="hood agenda" ${state.mtg.agendaOpen ? "open" : ""} data-agenda-fold><summary>Agenda${state.mtg.agendas[st.id]?.rows?.length ? ` · ${state.mtg.agendas[st.id].rows.length} items` : ""}</summary>${mtgAgenda(st, true)}</details>}`;
+  return `${people}<div style="display:flex;gap:8px;align-items:center"><span class="grow" style="flex:1"></span>${item}<button class="btn ghost sm" data-mtg-redraft="${esc(st.id)}" title="Draft the agenda again from the latest sources; your notes stay">${icon("undo")}Redraft agenda</button><button class="btn sm" data-mtg-done="${esc(st.id)}" title="Reads the meeting notes and proposes updates to every item">${icon("check")}Meeting done: update items</button></div><details class="hood agenda" ${state.mtg.agendaOpen !== false ? "open" : ""} data-agenda-fold><summary>Agenda${state.mtg.agendas[st.id]?.rows?.length ? ` · ${state.mtg.agendas[st.id].rows.length} items` : ""}</summary>${mtgAgenda(st, true)}</details>`;
 }
 // The agenda: one list in importance order across attendees, one short line each with its owner; click a line for
 // why it matters, the ask, the detail and the source. Notes typed during the call attach to the line (or the whole
@@ -1817,6 +1821,11 @@ async function renderMeetings() {
     "Your week from Google Calendar. Before a meeting, it drafts an agenda from what each attendee owes or is waiting on; after it, it reconciles your notes with the meeting notes and proposes the queue updates.",
     "Connect <b>Google Calendar</b> on the Connectors page, then set <code>\"meetings\": true</code> under <code>modules</code> in <code>config/brain.json</code> (or say <b>turn on Meetings</b> to Claude Code in this folder). Reload this page.");
   const week = weekOf(), r = await (await fetch("/api/meetings?week=" + week)).json(); state.mtg.data = r;
+  // A run that finishes changes the meeting's phase: drop what was loaded while it ran, so the new agenda shows.
+  state.mtg.phases = state.mtg.phases || {};
+  for (const e of r.days.flatMap(x => x.events)) { const id = e.state?.id, ph = e.state?.phase; if (!id) continue;
+    if (state.mtg.phases[id] !== undefined && state.mtg.phases[id] !== ph) { delete state.mtg.agendas[id]; delete state.mtg.reports[id + "/s1"]; }
+    state.mtg.phases[id] = ph; }
   if (state.view !== "meetings") return;
   const today = ymd(etNow()), M = state.mtg;
   const tag = st => !st ? "" : st.phase === "prep" || st.phase === "debrief" ? `<span class="dots"><i></i><i></i><i></i></span>` : st.phase?.endsWith("_failed") ? `<span class="tag bad">Stopped</span>` : st.phase === "updates" ? `<span class="tag ok">Updated</span>` : st.item_id ? `<span class="tag">Agenda ready</span>` : "";
@@ -1874,7 +1883,7 @@ document.addEventListener("click", async e => {
   if ((el = q("[data-mtg-toggle]"))) { const id = el.dataset.mtgToggle; state.mtg.open = state.mtg.open.has(id) ? new Set() : new Set([id]); return renderMeetings(); }
   if (q("[data-mtg-today]")) { state.mtg.off = 0; return renderMeetings(); }
   if (state.mtg.open.size && q(".calgrid") && !q(".ev")) { state.mtg.open = new Set(); return renderMeetings(); }
-  if ((el = q("[data-agenda-fold] > summary"))) { e.preventDefault(); state.mtg.agendaOpen = !state.mtg.agendaOpen; return renderMeetings(); }
+  if ((el = q("[data-agenda-fold] > summary"))) { e.preventDefault(); state.mtg.agendaOpen = state.mtg.agendaOpen === false; return renderMeetings(); }
   if ((el = q("[data-notes-more]"))) { state.mtg.notesOpen = el.dataset.notesMore; return renderMeetings(); }
   if (q("[data-mtg-refresh]")) { await mtgPost("refresh", { date: weekOf() }); setTimeout(renderMeetings, 400); return; }
   if ((el = q("[data-mtg-prep]"))) { el.disabled = true; if (await mtgPost("prep", { date: el.dataset.date, event_id: el.dataset.mtgPrep })) { load(); } return renderMeetings(); }
