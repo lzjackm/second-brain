@@ -56,7 +56,7 @@ for k, v in {"{{SPEC}}": spec, "{{JOB}}": jobs[spec], "{{BRIEF}}": open(brief).r
 print(tpl)
 PY
   # Specialists research and propose; only the editor writes the queue. They may write only this run's proposal folder.
-  SPEC_ALLOWED=(${ALLOWED:#Edit*} "Write($R/state/proposals/$RUN/**)")
+  SPEC_ALLOWED=(${ALLOWED:#Edit*} "Write($R/state/proposals/$RUN/**)" "Edit($R/state/proposals/$RUN/**)")
   JB_UNITS=$(wc -l < "$F" | tr -d ' ') bin/_claude.sh "specialist-$SPEC-$AREA" "state/prompt-specialist-$SPEC-$AREA.md" --add-dir ${(z)SOURCE_DIRS} --allowedTools "${SPEC_ALLOWED[@]}"
 done
 

@@ -631,22 +631,22 @@ kbd { font: 500 11px/16px var(--font); color: var(--ink-3); background: var(--fi
 <div class="shell" id="shell"><aside id="rail"></aside><section id="list"></section><main id="detail"></main></div>
 <aside id="drawer" aria-label="Chat"></aside>
 <div class="menu" id="menu"></div>
-<div class="overlay" id="pal"><div class="palette"><input id="pal-in" placeholder="Type a command or search items" autocomplete="off"><div class="plist" id="pal-list"></div></div></div>
+<div class="overlay" id="pal"><div class="palette"><input id="pal-in" placeholder="Search or run a command" autocomplete="off"><div class="plist" id="pal-list"></div></div></div>
 <div class="overlay" id="ask"><div class="dialog"><div class="h" id="ask-title"></div><div class="soft" id="ask-sub"></div><div id="ask-field"></div>
   <div class="actions"><button class="btn ghost" data-ask="cancel">Cancel <kbd>esc</kbd></button><button class="btn primary" data-ask="ok">Save <kbd>⌘↵</kbd></button></div></div></div>
 <div class="overlay" id="todo"><div class="dialog"><div class="h">New to-do</div>
   <input class="text" id="todo-title" placeholder="What needs doing" maxlength="120">
   <details id="todo-more"><summary class="soft">Note, link, due date</summary><div class="todo-more">
-    <textarea id="todo-note" rows="3" placeholder="Context: who, what, where it came from"></textarea>
-    <input class="text" id="todo-link" placeholder="Link (optional)"><input class="text" type="date" id="todo-due"></div></details>
+    <textarea id="todo-note" rows="3" placeholder="Note"></textarea>
+    <input class="text" id="todo-link" placeholder="Link"><input class="text" type="date" id="todo-due"></div></details>
   <label class="cs-req"><input type="checkbox" id="todo-plan"> Have the brain plan the steps</label>
   <div class="actions"><button class="btn ghost" data-todo="cancel">Cancel <kbd>esc</kbd></button><button class="btn primary" data-todo="ok">Add <kbd>⌘↵</kbd></button></div></div></div>
 <div class="overlay" id="csheet"><div class="dialog" id="csheet-body"></div></div>
 <div class="overlay" id="fbx"><div class="dialog"><div class="h">Feedback on this work</div>
-  <div class="soft">Goes to the job that did it. The nightly learning run turns it into rules.</div>
+  
   <div class="bar"><button class="iconbtn rate up" data-fbx-rate="up" title="Good">${""}</button><button class="iconbtn rate down" data-fbx-rate="down" title="Not good"></button></div>
   <div class="chips" id="fbx-tags"></div>
-  <textarea id="fbx-note" rows="3" placeholder="What should it have done? e.g. looked only at one source; most of the activity is elsewhere"></textarea>
+  <textarea id="fbx-note" rows="3" placeholder="What should it have done?"></textarea>
   <div class="actions"><button class="btn ghost" data-fbx="cancel">Cancel <kbd>esc</kbd></button><button class="btn primary" data-fbx="ok">Save <kbd>⌘↵</kbd></button></div></div></div>
 <div class="overlay" id="report"><div class="dialog report"><div class="rtop"><span class="h" id="report-title">Agent report</span><span class="grow"></span><button class="btn ghost sm" data-close-report>Close <kbd>esc</kbd></button></div><div class="md" id="report-body"></div></div></div>
 <div id="toast"></div>
@@ -679,7 +679,7 @@ const WHERE = { none: "", slack_send: "Sends in Slack", slack_draft: "Saves a Sl
 function consequence(s) {
   const k = s.execute?.kind || "none", where = s.execute?.target_label || "";
   return {
-    none: "Marks this step done.",
+    none: "",
     slack_send: `Posts ${where ? "to " + where + " " : ""}right away.`,
     slack_draft: "Saves a Slack draft. Nothing is sent.",
     gdoc_create: "Creates the doc and links it here. Nothing is sent.",
@@ -712,6 +712,7 @@ const ICON = {
   plug: '<path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/>',
   video: '<path d="m16 13 5.22 3.48a.5.5 0 0 0 .78-.42V7.94a.5.5 0 0 0-.76-.43L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>',
   plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+  archive: '<rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>',
   left: '<path d="m15 18-6-6 6-6"/>', right: '<path d="m9 18 6-6-6-6"/>',
   inbox: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
   loader: '<path d="M21 12a9 9 0 1 1-6.22-8.56"/>', hourglass: '<path d="M5 22h14M5 2h14M17 22v-4.17a2 2 0 0 0-.59-1.42L12 12l-4.41 4.41A2 2 0 0 0 7 17.83V22M7 2v4.17a2 2 0 0 0 .59 1.42L12 12l4.41-4.41A2 2 0 0 0 17 6.17V2"/>',
@@ -858,7 +859,7 @@ function rowNext(i) {
   if (!isAgent(cs.owner) && first && cs.text.toLowerCase().startsWith(first)) return esc(plain(cs.text));
   return `${isAgent(cs.owner) ? "Agent" : esc(cs.owner)}: ${esc(plain(cs.text))}`;
 }
-const EMPTY = { queue: ["All clear", "Nothing needs you right now."], progress: ["Nothing running", "Running work shows here."], waiting: ["No one owes you anything", "What others owe you shows here."], done: ["Nothing done yet", "Cleared items land here."] };
+const EMPTY = { queue: ["All clear", ""], progress: ["Nothing running", ""], waiting: ["No one owes you anything", ""], done: ["Nothing done yet", ""] };
 function renderList() {
   const items = visible();
   if (state.sel >= items.length) state.sel = Math.max(0, items.length - 1);
@@ -913,11 +914,11 @@ function currentCard(i, s, why) {
       ${mine && s.conflicts?.length ? `<ol class="conflicts">${s.conflicts.map(c => `<li><div class="ct">${esc(c.topic)}</div><div><span class="lbl">Your notes</span> ${esc(c.yours)}</div><div><span class="lbl">Meeting notes</span> ${esc(c.notes_say)}${c.notes_url ? ` <a href="${safeUrl(c.notes_url)}" target="_blank" rel="noopener">source</a>` : ""}</div>${c.affects ? `<div class="soft">Changes: ${esc(c.affects)}</div>` : ""}</li>`).join("")}</ol>` : ""}
       ${hasDraft ? `<textarea class="draft" id="draft" data-step="${esc(s.id)}" spellcheck="true" ${busy ? "disabled" : ""}>${esc(s.draft || "")}</textarea>` : ""}
       <div class="bar">${busy && !blocked ? "" : primary}${mine && kind === "none" && s.execute?.url ? `<a class="btn ghost keep" href="${safeUrl(s.execute.url)}" target="_blank" rel="noopener" title="Open ${esc(s.execute.target_label || "link")}">${icon("out")}<span class="lbl">Open ${esc(s.execute.target_label || "link")}</span></a>` : ""}
-        ${mine && !busy ? `<button class="btn ghost" data-step-act="revise_step" title="Revise (v)">${icon("pen")}<span class="lbl">Revise</span> <kbd>v</kbd></button>` : ""}
-        <button class="btn ghost" data-chat-open title="Ask (c)">${icon("chat")}<span class="lbl">Ask</span> <kbd>c</kbd>${unread(i) ? '<span class="badge-dot"></span>' : ""}</button>
-        ${busy && !blocked ? "" : `<button class="btn ghost" data-step-act="agent_step" title="${agent ? "Retry agent" : "Agent"} (h)">${icon("bot")}<span class="lbl">${agent ? "Retry agent" : "Agent"}</span> <kbd>h</kbd></button>`}
+        ${mine && !busy ? `<button class="btn ghost" data-step-act="revise_step" title="Say what's wrong and the draft is rewritten. Nothing is sent.">${icon("pen")}<span class="lbl">Revise</span> <kbd>v</kbd></button>` : ""}
+        <button class="btn ghost" data-chat-open title="Ask a question about this item: its sources, why it's yours, what to do">${icon("chat")}<span class="lbl">Ask</span> <kbd>c</kbd>${unread(i) ? '<span class="badge-dot"></span>' : ""}</button>
+        ${busy && !blocked ? "" : `<button class="btn ghost" data-step-act="agent_step" title="Hand this step to an agent: it researches, writes a report and drafts your next step. Nothing is sent.">${icon("bot")}<span class="lbl">${agent ? "Retry agent" : "Agent"}</span> <kbd>h</kbd></button>`}
         <span class="grow"></span>
-        ${!mine && !agent && !busy ? `<button class="btn ghost" data-step-act="nudge" title="Nudge (n)">${icon("send")}<span class="lbl">Nudge</span> <kbd>n</kbd></button>` : ""}
+        ${!mine && !agent && !busy ? `<button class="btn ghost" data-step-act="nudge" title="${esc(`Drafts a follow-up asking ${(s.owner || "them").split(" ")[0]} where this stands. Nothing is sent.`)}">${icon("send")}<span class="lbl">Nudge</span> <kbd>n</kbd></button>` : ""}
         <button class="iconbtn" data-menu="step" title="More">${icon("more")}</button></div>
     </div></div>`;
 }
@@ -1062,7 +1063,7 @@ function renderDrawer() {
         if (x.kind === "note") return `<div class="note"><div class="who">Note for the lead · ${esc(fmtTs(x.m.ts))}${x.m.redraft ? " · redraft asked" : ""}</div><div class="text">${esc(x.m.text)}</div></div>`;
         const m = x.m, me = m.role === OWNER;
         return `<div class="msg ${me ? "me" : ""}">${avatar(me ? OWNER : "agent")}<div class="bubble"><div class="who">${me ? "You" : "Agent"} · ${esc(fmtTs(m.ts))}</div><div class="text">${esc(m.text)}</div>${m.proposed_draft ? `<div class="pd">${esc(m.proposed_draft)}</div><div class="pact">${m.applied_at ? '<span class="tag ok">Applied to draft</span>' : `<button class="btn line sm" data-apply="${x.n}" data-step="${esc(m.step_id || "")}">${icon("check")}Use this draft</button>`}</div>` : ""}</div></div>`;
-      }).join("") : `<div class="dempty">Ask about the draft, or switch to Note to brief the lead.</div>`}
+      }).join("") : `<div class="dempty"></div>`}
       ${i.chat_pending ? `<div class="thinking">${avatar("agent")}<span class="dots"><i></i><i></i><i></i></span>Checking</div>` : ""}
     </div>
     ${composer(ask ? "Ask about this item" : "Context for the lead", ask ? "Ask (Enter)" : "Save (Enter) · save and redraft (⌘Enter)")}`;
@@ -1128,7 +1129,7 @@ function renderTalk(d, i) {
   d.innerHTML = `
     ${drawerHead(s ? s.text : i.title, working ? '<span class="tstate">Working</span>' : "")}
     <div class="dbd talk" id="dbd">
-      ${!t ? `<div class="dempty">Loading…</div>` : !started ? `<div class="dempty">Tell the agent what to find or do. It reads Slack, Drive, Linear and the repos, writes a report and drafts your next step. Nothing is sent, and your to-do stays yours. Reply any time, while it works or after.</div>` : ""}
+      ${!t ? `<div class="dempty">Loading…</div>` : !started ? `<div class="dempty">What should it find or do?</div>` : ""}
       ${msgs.map(item).join("")}
       ${working ? `<div class="tmsg ag"><div class="tav">${avatar("agent")}</div><div class="tbody"><div class="think"><span class="dots"><i></i><i></i><i></i></span><span>${t?.running ? "Working" : "Starting"}</span>
         ${live.length ? `<button class="linkbtn" data-talk-steps>${state.talkShowSteps ? "Hide" : "Show"} ${live.length} step${live.length === 1 ? "" : "s"}</button>` : ""}</div>
@@ -1272,26 +1273,26 @@ async function stepAct(action) {
   if (action === "revise_step" && !isOwner(s.owner)) return toast("Revise works on your steps", true);
   if (action === "take_back" && !(isAgent(s.owner) && s.status === "failed")) return;
   let note = "";
-  if (action === "step_done_elsewhere") { note = await ask({ title: isOwner(s.owner) || isAgent(s.owner) ? "Where did you do it?" : `Where did ${s.owner} do it?`, sub: "Optional. A hint helps the lead find it and link it; without one it checks the step's sources.", placeholder: "Replied to Jordan in a DM around 1:40 PM", skip: "Mark done" }); if (note === null) return; }
+  if (action === "step_done_elsewhere") { note = await ask({ title: isOwner(s.owner) || isAgent(s.owner) ? "Where did you do it?" : `Where did ${s.owner} do it?`, placeholder: "Where (optional)", skip: "Mark done" }); if (note === null) return; }
   if (action === "agent_step" && !s.meeting_phase) return openTalk();
-  if (action === "agent_step") { note = await ask({ title: "What should the agent do?", sub: "It does the work, writes a report and drafts your next step. Nothing is sent.", value: s.agent?.brief || s.text }); if (!note) return; }
-  if (action === "revise_step") { note = await ask({ title: "What needs to change?", sub: "Rewrites the draft. Nothing is sent.", placeholder: "Plain words, no slide codes" }); if (!note) return; }
-  if (action === "nudge") { if (isOwner(s.owner) || isAgent(s.owner)) return; note = await ask({ title: `Nudge ${s.owner}?`, sub: "Drafts a short follow-up in the thread for you to send. Nothing is sent yet.", placeholder: "Optional: anything to add", multiline: false }); if (note === null) return; }
+  if (action === "agent_step") { note = await ask({ title: "What should the agent do?", value: s.agent?.brief || s.text }); if (!note) return; }
+  if (action === "revise_step") { note = await ask({ title: "What needs to change?", placeholder: "" }); if (!note) return; }
+  if (action === "nudge") { if (isOwner(s.owner) || isAgent(s.owner)) return; note = await ask({ title: `Nudge ${s.owner}?`, placeholder: "Anything to add (optional)", multiline: false }); if (note === null) return; }
   let override = false;
   const blocks = action === "do_step" ? stepChecks(i, s).filter(c => c.level === "block") : [];
-  if (blocks.length) { note = await ask({ title: "Check failed. Do it anyway?", sub: blocks.map(c => c.msg).join(". ") + ". Say why it's fine; it's logged.", placeholder: "I confirmed it with Sam in Slack" }); if (!note) return; override = true; }
+  if (blocks.length) { note = await ask({ title: "Check failed. Do it anyway?", sub: blocks.map(c => c.msg).join(". ") + ".", placeholder: "Why it's fine" }); if (!note) return; override = true; }
   let learned = "";
   if (action === "do_step" && s.meeting_phase === "reconcile") {
-    learned = await ask({ title: "How do these settle?", sub: "Say which is right for each, or what actually happened. The repo and queue updates are redrafted from your answer before anything is applied.", placeholder: "1: the notes are right. 2: mine; Taylor said Nov 20, not Nov 18", multiline: true });
+    learned = await ask({ title: "How do these settle?", placeholder: "Which is right for each", multiline: true });
     if (!learned) return;
   } else if (action === "do_step" && (s.execute?.kind || "none") === "none" && isOwner(s.owner) && i.type !== "meeting" && (s.draft || "").trim()
              && (s.ask_outcome || /\b(call|meet|meeting|ask|discuss|sync|talk|check with|decide|chat)\b/i.test(s.text || ""))) {
     // Only a call or question (the step has a talking point) has an answer worth asking for; anything else just closes.
-    learned = await ask({ title: "Closing this step. What came of it?", sub: "This step was a call or question, so it may have an answer. A note records the outcome, redrafts your next step, and teaches the brain. Add one and save, Skip to close with no note, or Cancel to keep the step open.", placeholder: "Morgan owns the FAQ; final by Friday EOD", multiline: true, skip: "Skip" });
+    learned = await ask({ title: "Closing this step. What came of it?", placeholder: "Outcome", multiline: true, skip: "Skip" });
     if (learned === null) return;
   }
   if (action === "skip_step") { const left = steps(i).filter(x => x !== s && (x.status || "todo") === "todo").length;
-    note = await ask({ title: "Skip this step?", sub: (left ? `Skips only this step; ${left} more step${left > 1 ? "s stay" : " stays"} on this item. To drop the whole item, use ⋯ then Dismiss.` : "This is the last step, so the item closes.") + " Optional reason.", placeholder: "Not needed", skip: "Skip" }); if (note === null) return; }
+    note = await ask({ title: "Skip this step?", sub: left ? "" : "This closes the item.", placeholder: "Reason (optional)", skip: "Skip" }); if (note === null) return; }
   const draft = $("draft")?.dataset.step === s.id ? $("draft").value : undefined;
   if (!(await post(i, { action, step_id: s.id, note: note || "", ...(override ? { override } : {}), ...(draft !== undefined ? { draft } : {}), ...(learned ? { learned } : {}) }))) return;
   const kind = s.execute?.kind || "none";
@@ -1300,12 +1301,12 @@ async function stepAct(action) {
 async function itemAct(action, extra = {}) {
   const i = current(); if (!i) return;
   let note = extra.note || "", who;
-  if (action === "done_elsewhere") { note = await ask({ title: "Where was this handled?", sub: "Closes every open step. Optional hint: the lead finds and links what happened either way.", placeholder: "On the 2 PM call; replied in #product", skip: "Mark done" }); if (note === null) return; }
+  if (action === "done_elsewhere") { note = await ask({ title: "Where was this handled?", sub: "Closes every open step.", placeholder: "Where (optional)", skip: "Mark done" }); if (note === null) return; }
   if (action === "waiting" || action === "delegate") {
-    who = await ask({ title: action === "waiting" ? "Waiting on whom?" : "Delegate to whom?", placeholder: "Sam Lee", multiline: false }); if (!who) return;
-    if (action === "waiting") { note = await ask({ title: `Waiting on ${who} for what?`, placeholder: "Confirms the dial-in", multiline: false }); if (note === null) return; }
+    who = await ask({ title: action === "waiting" ? "Waiting on whom?" : "Delegate to whom?", placeholder: "Name", multiline: false }); if (!who) return;
+    if (action === "waiting") { note = await ask({ title: `Waiting on ${who} for what?`, placeholder: "What for", multiline: false }); if (note === null) return; }
   }
-  if (action === "dismiss") { note = await ask({ title: "Dismiss this item?", sub: "Optional reason. The lead learns from it.", placeholder: "Not mine; Sam owns this" }); if (note === null) return; }
+  if (action === "dismiss") { note = await ask({ title: "Dismiss this item?", placeholder: "Reason (optional)" }); if (note === null) return; }
   if (!(await post(i, { action, note, who, ...extra }))) return;
   if (action === "note") { await load(); return toast(icon("check") + (extra.redraft ? "Saved; lead redrafting" : "Saved for the lead")); }
   afterAct(i, icon("check") + ({ done_elsewhere: "Marked done elsewhere", waiting: `Waiting on ${who}`, snooze: "Snoozed to 8 AM", delegate: `Delegated to ${who}`, dismiss: "Dismissed", reopen: "Reopened" }[action] || ""));
@@ -1358,7 +1359,7 @@ async function renderSynopsis(date) {
   const text = date ? (await (await fetch("/api/synopsis/" + date)).json()).text : s.latest;
   const today = d === s.dates[0], need = count("queue"), wait = count("waiting"), prog = count("progress");
   const summary = today ? `<div class="today-line"><b>${need ? `${need} need${need === 1 ? "s" : ""} you` : "Nothing needs you"}</b>${[wait && `${wait} waiting`, prog && `${prog} in progress`, state.today && `${state.today} cleared today`].filter(Boolean).map(x => " · " + x).join("")}</div>` : "";
-  $("detail").innerHTML = `<div class="page"><div class="h">Synopsis</div><div class="chips">${s.dates.map(x => `<button class="chip ${x === d ? "on" : ""}" data-syn="${x}">${fmtDate(x)}</button>`).join("")}</div>${summary}<div class="md" id="syn">${text ? md(text) : "<p>No synopsis yet. Each lead run writes one.</p>"}</div></div>`;
+  $("detail").innerHTML = `<div class="page"><div class="h">Synopsis</div><div class="chips">${s.dates.map(x => `<button class="chip ${x === d ? "on" : ""}" data-syn="${x}">${fmtDate(x)}</button>`).join("")}</div>${summary}<div class="md" id="syn">${text ? md(text) : "<p>No synopsis yet.</p>"}</div></div>`;
   // Long lists show their first 5; the rest is one click away.
   document.querySelectorAll("#syn ul").forEach(ul => {
     const extra = [...ul.children].slice(5); if (!extra.length) return;
@@ -1388,7 +1389,7 @@ async function renderStats() {
       ${ops.suggestion ? `<div class="rec"><div class="txt">${esc(ops.suggestion)}</div></div>` : ""}
       ${shadowBlock(ops.shadow)}
       <div class="h" style="font-size:16px; margin-top:12px">Jobs, last 7 days</div>
-      <div class="soft" style="font-size:13px">Cost is list-price equivalent. Quality is how often you use a job's output as written (edits count half).</div>
+      
       <div class="md" id="jobs"><p>Loading…</p></div>
     </details></div>`;
   const j = await (await fetch("/api/jobs")).json();
@@ -1469,7 +1470,7 @@ async function renderTopic() {
           <div class="lcomp">
             <div class="chips" id="lchips">${lchipsHTML(t)}</div>
             <textarea id="lcomp-in" rows="2" placeholder=""></textarea>
-            <div class="bar"><span class="muted" style="font-size:12px">Enter to send · Shift+Enter for a new line</span><span class="grow"></span><button class="btn primary sm" data-lsend>${icon("send")}<span id="lsend-l"></span></button></div>
+            <div class="bar"><span class="grow"></span><button class="btn primary sm" data-lsend>${icon("send")}<span id="lsend-l"></span></button></div>
           </div>
         </div>
         <div class="lside" id="lside">${lsideHTML(t)}</div>
@@ -1492,7 +1493,7 @@ async function renderTopic() {
 function lsync(t) {
   const ta = $("lcomp-in"), L = state.learn;
   ta.disabled = !!t.busy;
-  ta.placeholder = L.ask ? "Ask anything about this topic. No quiz, levels don't change." : "Your answer…";
+  ta.placeholder = L.ask ? "Ask anything" : "Your answer…";
   $("lsend-l").textContent = L.ask ? "Ask" : "Send";
   document.querySelector("[data-lsend]").disabled = !!t.busy;
 }
@@ -1580,8 +1581,8 @@ async function renderArchHome() {
   $("detail").innerHTML = `<div class="page" id="arch-page" style="max-width:960px">
     <div class="h">Solution Architect</div>
     <div class="askbox">
-      <textarea id="arch-q" rows="4" placeholder="${esc(CFG.modules?.architect?.placeholder || "Paste the client's question, with screenshots if any")}"></textarea>
-      <div class="bar"><input class="text" id="arch-ctx" placeholder="Client or context (optional)" style="flex:1; min-width:180px">
+      <textarea id="arch-q" rows="4" placeholder="${esc(CFG.modules?.architect?.placeholder || "Client's question")}"></textarea>
+      <div class="bar"><input class="text" id="arch-ctx" placeholder="Client (optional)" style="flex:1; min-width:180px">
         <div class="seg"><button class="${A.depth === "quick" ? "on" : ""}" data-arch-depth="quick" title="ADRs, specs, docs and ledger; Slack only if needed">Quick</button><button class="${A.depth === "exhaustive" ? "on" : ""}" data-arch-depth="exhaustive" title="Every source, including Slack, Drive, Linear and recent PRs">Exhaustive</button></div>
         <button class="btn primary sm" data-arch-ask>${icon("search")}Find the answer</button></div>
     </div>
@@ -1604,10 +1605,12 @@ function archTurn(t, n) {
         <span class="muted" style="font-size:12px">${f.confidence === "high" ? "every claim confirmed in a spec, ADR or code" : esc((f.confidence_why || []).join(" · "))}</span><span class="grow"></span>
         <button class="btn ghost sm" data-arch-modify="${n}">${icon("pen")}Modify</button><button class="btn ghost sm" data-arch-copy="${n}">${icon("copy")}Copy</button></div>
       <div class="cbody"><div class="ans plain">${esc(f.shareable_answer || "")}</div>
+        ${t.sent ? `<details class="sent"><summary class="soft">What you sent</summary><div class="ans plain">${esc(t.sent.text)}</div></details>` : ""}
         ${(() => {  // closed by default; the summary says when something needs a look before sending
           const flags = (f.leaks || []).length + (f.unconfirmed || []).length + (f.conflicts || []).length + (f.questions || []).filter(x => x.answered !== "yes").length;
           return `<details class="hood"><summary>Reasoning and checks${flags ? ` · <span class="flagc">${flags} to check before sending</span>` : ""}</summary>
         ${(f.questions || []).length ? `<div class="qcov">${f.questions.map(x => `<span class="tag ${x.answered === "yes" ? "ok" : x.answered === "partly" ? "warn" : "bad"}" title="${esc(x.where || "")}">${esc(firstSentence(x.q, 60))}</span>`).join("")}</div>` : ""}
+        ${(f.routes_not_named || []).length ? `<div class="inote"><div class="lbl">Routes found but not in the answer</div><ul>${f.routes_not_named.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
         ${(f.missing_questions || []).length ? `<div class="inote warn"><div class="lbl">Reviewer added answers the first draft skipped</div><ul>${f.missing_questions.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
         ${f.internal_notes ? `<div class="inote"><div class="lbl">For you, not the client</div>${md(f.internal_notes)}</div>` : ""}
         ${(f.changes || []).length ? `<div class="inote"><div class="lbl">Changed</div><ul>${f.changes.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
@@ -1624,8 +1627,10 @@ function archTurn(t, n) {
 }
 function archLive(q) {
   const pr = q.progress || { phase: "Starting", steps: [], count: 0 };
-  return q.busy ? `<div class="card"><div class="cbody"><div class="thinking"><span class="dots"><i></i><i></i><i></i></span>${esc(pr.phase)}${pr.count ? ` · ${pr.count} looks so far` : ""}</div>
-    ${pr.steps.length ? `<ul class="steps">${pr.steps.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}</div></div>` : "";
+  const last = q.turns[q.turns.length - 1], dr = q.busy && last?.draft && !last.final;
+  return (dr ? `<div class="card acard"><div class="chead"><span class="k">Draft</span><span class="tag warn">checking</span></div><div class="cbody"><div class="ans plain">${esc(last.draft)}</div></div></div>` : "")
+    + (q.busy ? `<div class="card"><div class="cbody"><div class="thinking"><span class="dots"><i></i><i></i><i></i></span>${esc(pr.phase)}${pr.count ? ` · ${pr.count} looks so far` : ""}</div>
+    ${pr.steps.length ? `<ul class="steps">${pr.steps.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}</div></div>` : "");
 }
 async function renderArchQ() {
   const r = await fetch("/api/architect/" + state.arch.id);
@@ -1634,14 +1639,16 @@ async function renderArchQ() {
   if ($("arch-turns") && prev?.id === q.id && prev.busy && q.busy && prev.turns.length === q.turns.length) { $("arch-live").innerHTML = archLive(q); return; }
   const draft = $("arch-f")?.value || "";
   $("detail").innerHTML = `<div class="page" id="arch-page" style="max-width:900px">
-    <div class="ltop"><button class="btn ghost sm" data-arch-back>${icon("undo")}Solution Architect</button><span class="grow"></span>${q.context ? `<span class="muted">${esc(q.context)}</span>` : ""}
+    <div class="ltop"><button class="btn ghost sm" data-arch-back title="Back (Esc)">${icon("undo")}Solution Architect</button><span class="grow"></span>${q.context ? `<span class="muted">${esc(q.context)}</span>` : ""}
       <button class="iconbtn" data-arch-fb="up" title="Good answer">${icon("up")}</button><button class="iconbtn" data-arch-fb="down" title="Not good: say why">${icon("down")}</button>
-      <button class="iconbtn" data-arch-archive title="Archive">${icon("x")}</button></div>
+</div>
     <div id="arch-turns">${q.turns.map((t, n, all) => all[n + 1]?.auto_tighten && !all[n + 1].pending ? "" : archTurn(t, n)).join("")}</div>
     <div id="arch-live">${archLive(q)}</div>
+    ${q.busy ? "" : `<div class="bar"><button class="btn ghost sm" data-arch-archive title="Move it off the list; it stays on disk">${icon("archive")}Archive</button></div>`}
     ${(q.feedback || []).length ? `<div class="fblist">${q.feedback.map(f => `<div class="fbitem">${f.rating ? icon(f.rating) : ""}${(f.tags || []).map(g => `<span class="tag">${esc(g)}</span>`).join("")}${f.note ? `<span>${esc(f.note)}</span>` : ""}</div>`).join("")}</div>` : ""}
     <div class="askbox"><textarea id="arch-f" rows="2" placeholder="Follow-up question" ${q.busy ? "disabled" : ""}>${esc(draft)}</textarea>
       <div class="bar"><span class="grow"></span><div class="seg"><button class="${A.depth === "quick" ? "on" : ""}" data-arch-depth="quick">Quick</button><button class="${A.depth === "exhaustive" ? "on" : ""}" data-arch-depth="exhaustive">Exhaustive</button></div>
+        ${q.turns.some(t => t.final) ? `<button class="btn ghost sm" data-arch-sent ${q.busy ? "disabled" : ""} title="Paste the reply you actually sent. The brain compares it with its answer and learns from the difference.">${icon("check")}What I sent</button>` : ""}
         <button class="btn primary sm" data-arch-follow ${q.busy ? "disabled" : ""}>${icon("send")}Ask</button></div></div>
   </div>`;
 }
@@ -1661,10 +1668,11 @@ document.addEventListener("click", async e => {
   if ((el = q("[data-arch]"))) { state.arch.id = el.dataset.arch; state.arch.q = null; return renderArchQ(); }
   if (q("[data-arch-retry]")) { if (await archPost(state.arch.id, { action: "retry" })) { state.arch.q = null; renderArchQ(); toast(icon("undo") + "Running again"); } return; }
   if (q("[data-arch-back]")) { state.arch.id = null; return renderArchHome(); }
+  if (q("[data-arch-sent]")) { const text = $("arch-f").value.trim(); if (!text) return $("arch-f").focus(); if (await archPost(state.arch.id, { action: "sent", text })) { $("arch-f").value = ""; state.arch.q = null; renderArchQ(); toast(icon("check") + "Saved. It learns from the difference"); } return; }
   if (q("[data-arch-follow]")) { const text = $("arch-f").value.trim(); if (!text) return; if (await archPost(state.arch.id, { action: "followup", text, depth: state.arch.depth, images: takeImgs("arch-f") })) { $("arch-f").value = ""; state.arch.q = null; renderArchQ(); } return; }
   if ((el = q("[data-arch-modify]"))) {
     state.arch.imgs["ask-in"] = [];
-    const text = await ask({ title: "What should change?", sub: "It rewrites this answer and checks it again. Your note is also saved as feedback, so it can become a rule.", placeholder: "Don't offer a higher rate limit; say we'll review after launch. Shorter on point 2. Paste a screenshot if it helps." });
+    const text = await ask({ title: "What should change?", placeholder: "" });
     if (!text) return;
     if (await archPost(state.arch.id, { action: "revise", text, turn: +el.dataset.archModify, depth: state.arch.depth, images: takeImgs("ask-in") })) { state.arch.q = null; renderArchQ(); toast(icon("pen") + "Rewriting"); }
     return;
@@ -1808,12 +1816,12 @@ function mtgAgenda(st, editable) {
     return `<div class="ag ${open ? "open" : ""}"><button class="ag-head" data-ag="${esc(k)}">${i != null ? `<span class="ag-rank">${i + 1}</span>` : ""}<span class="ag-title">${esc(x.headline || firstSentence(x.topic, 80))}</span>${x.notes.length ? `<span class="tag">${x.notes.length} note${x.notes.length === 1 ? "" : "s"}</span>` : ""}<span class="ag-owner">${esc(who)}</span></button>
       <div class="ag-sub">${esc(x.status || firstSentence(x.last_known, 110))}</div>
       ${open ? `<div class="ag-more">${x.why ? `<div><span class="lbl">Why now</span> ${esc(x.why)}</div>` : ""}${x.ask ? `<div><span class="lbl">Ask</span> ${esc(x.ask)}</div>` : ""}${x.detail || (x.last_known && !x.status ? "" : x.last_known) ? `<div class="soft">${esc(x.detail || x.last_known)}</div>` : ""}
-        <div class="muted" style="font-size:12px">${esc(x.owner || "")}${x.source_url ? ` · <a href="${safeUrl(x.source_url)}" target="_blank">Source${x.last_known_date ? ", " + esc(x.last_known_date.slice(5)) : ""}</a>` : ""}</div>${notes(x.notes)}${box(x.n, "Color on this item. Enter adds it")}</div>` : ""}</div>`;
+        <div class="muted" style="font-size:12px">${esc(x.owner || "")}${x.source_url ? ` · <a href="${safeUrl(x.source_url)}" target="_blank">Source${x.last_known_date ? ", " + esc(x.last_known_date.slice(5)) : ""}</a>` : ""}</div>${notes(x.notes)}${box(x.n, "Note")}</div>` : ""}</div>`;
   };
   const main = a.rows.filter(x => !x.later), later = a.rows.filter(x => x.later);
   return `<div class="agenda">${main.map(row).join("")}
     ${later.length ? `<details class="hood"><summary>Also open, not for today (${later.length})</summary>${later.map(x => row(x, null)).join("")}</details>` : ""}
-    ${editable || a.general.length ? `<div class="ag-general"><div class="lbl">Notes and color</div>${notes(a.general)}${box(null, "What someone said, nuance the recording may miss. Enter adds it; keep adding as the call goes")}</div>` : ""}</div>`;
+    ${editable || a.general.length ? `<div class="ag-general"><div class="lbl">Notes and color</div>${notes(a.general)}${box(null, "Note")}</div>` : ""}</div>`;
 }
 async function mtgSaveNote(k) {
   const [item_id, n] = k.split("|"), text = (state.mtg.drafts[k] || "").trim(); if (!text) return;
@@ -1979,7 +1987,10 @@ document.addEventListener("keydown", e => {
     if ($("menu").classList.contains("show")) return closeMenu();
     if ($("report").classList.contains("show")) return $("report").classList.remove("show");
     if (state.chat) { document.activeElement?.blur(); return setChat(false); }
-    return document.activeElement?.blur();
+    // Escape goes back a screen (Solution Architect question, Learn topic). In a box with text, the first Escape only leaves the box.
+    const box = document.activeElement; if (box && ["TEXTAREA", "INPUT"].includes(box.tagName) && box.value) return box.blur();
+    const back = document.querySelector("#detail [data-arch-back], #detail [data-lback]"); if (back) { box?.blur(); return back.click(); }
+    return box?.blur();
   }
   if (document.activeElement?.id === "compose" && e.key === "Enter" && !e.shiftKey) { e.preventDefault(); return submitCompose(state.mode === "note" && e.metaKey); }
   if (isText() || e.metaKey || e.ctrlKey || e.altKey) return;
@@ -2075,12 +2086,12 @@ async function renderConnectors() {
       <span class="cstate"><span class="rd ${k}"></span>${l}</span>
       ${c.state !== "connected" ? `<a class="btn ghost sm" href="${safeUrl(r.connect_url)}" target="_blank" rel="noopener" title="Sign in to ${esc(c.name)} at claude.ai">Connect</a>` : ""}
       ${action(c)}</div>`; }).join("") || '<div class="muted">No connector matches.</div>'}</div>
-    <div class="muted" style="font-size:12px">Order is an estimate of how widely Claude users connect each one. ${r.checked_at ? "Status checked " + esc(fmtTs(r.checked_at)) + "." : ""}</div>
+    <div class="muted" style="font-size:12px">${r.checked_at ? "Status checked " + esc(fmtTs(r.checked_at)) + "." : ""}</div>
   </div>`;
   $("detail").scrollTop = scroll;
   if (hadFocus) { const i = $("conn-q"); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
 }
-const ROLE = { watch: ["Watch", "Lead runs read it for new work, each since it was last read."], lookup: ["Lookup", "Read only when an item, link or agent needs it. Cheapest."], off: ["Off", "Kept, but no run reads it."] };
+const ROLE = { watch: ["Watch", "Read for new work"], lookup: ["Lookup", "Read only when needed"], off: ["Off", "Not read"] };
 function claudeCard(cl) {
   const head = `<span class="clogo">C</span>`;
   if (!cl) return `<div class="claude">${head}<div class="cmain"><div class="cname">Claude</div><div class="cabout">Checking your Claude sign-in…</div></div></div>`;
@@ -2104,13 +2115,13 @@ function renderSheet() {
   const t = c.test, testing = (C.data?.testing || []).includes(c.server) || t?.status === "running";
   $("csheet-body").innerHTML = `<div class="h">${esc(c.name)}</div>
     <div class="cs-row"><span class="cs-k">Role</span><div class="seg">${Object.keys(ROLE).map(k => `<button data-cs-role="${k}" class="${d.role === k ? "on" : ""}">${ROLE[k][0]}</button>`).join("")}</div><span class="cs-help">${esc(ROLE[d.role][1])}</span></div>
-    <div class="cs-row"><span class="cs-k">${d.role === "watch" ? "What to watch" : "What it's for"}</span><textarea id="cs-use" rows="2">${esc(d.use)}</textarea><span class="cs-help">Plain words. Channels, folders or teams per area go in that area's lead spec.</span></div>
-    ${d.role === "watch" ? `<div class="cs-row"><span class="cs-k">How often</span><div class="seg"><button data-cs-cad="every" class="${d.cadence !== "daily" ? "on" : ""}">Every lead run</button><button data-cs-cad="daily" class="${d.cadence === "daily" ? "on" : ""}">Once a day</button></div><span class="cs-help">Lead runs follow your schedule, inside working hours. Each read covers everything since this connector was last read.</span></div>
+    <div class="cs-row"><span class="cs-k">${d.role === "watch" ? "What to watch" : "What it's for"}</span><textarea id="cs-use" rows="2">${esc(d.use)}</textarea></div>
+    ${d.role === "watch" ? `<div class="cs-row"><span class="cs-k">How often</span><div class="seg"><button data-cs-cad="every" class="${d.cadence !== "daily" ? "on" : ""}">Every lead run</button><button data-cs-cad="daily" class="${d.cadence === "daily" ? "on" : ""}">Once a day</button></div></div>
       <label class="cs-req"><input type="checkbox" id="cs-req" ${d.required ? "checked" : ""}> Wait for it to connect before a run starts</label>` : ""}
     ${areas.length > 1 ? `<div class="cs-row"><span class="cs-k">Areas</span><div class="cs-areas">${areas.map(a => `<label><input type="checkbox" data-cs-area="${esc(a)}" ${!d.areas.length || d.areas.includes(a) ? "checked" : ""}> ${esc(a)}</label>`).join("")}</div></div>` : ""}
     <div class="cs-test"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span class="cs-k">Test read</span>
       <button class="btn sm" data-cs-test ${testing || !c.tools ? "disabled" : ""}>${testing ? "Reading…" : t ? "Run again" : "Run a test read"}</button></div>
-      <span class="cs-help">${c.tools ? "Reads the last 48 hours and shows what would become an item. Nothing is queued." : "Available once it has found its read tools."}</span>
+      <span class="cs-help">${c.tools ? "" : "Available once it finds its read tools."}</span>
       ${t && t.status === "done" ? `<div>${esc(t.read || "")}</div>${t.items?.length ? `<ol>${t.items.map(x => `<li>${esc(x.title)}<div class="why">${esc(x.why || "")}${x.source ? " · " + esc(x.source) : ""}</div></li>`).join("")}</ol>` : `<div class="muted">Nothing would become an item.</div>`}${t.suggestion ? `<div class="cs-help">${esc(t.suggestion)}</div>` : ""}` : ""}</div>
     <div class="actions"><button class="btn ghost" data-cs-remove>Remove</button><span style="flex:1"></span><button class="btn ghost" data-cs-cancel>Cancel</button><button class="btn primary" data-cs-save>Save</button></div>`;
   $("csheet").classList.add("show");
@@ -2120,6 +2131,22 @@ function openSheet(name) {
   state.conn.open = name; state.conn.draft = { role: c.role || "watch", cadence: c.cadence || "every", areas: [...(c.areas || [])], required: !!c.required, use: c.use || "" };
   renderSheet();
 }
+// A tooltip that repeats the button's own words is noise (Nov 20): drop it, keep it only when it says more.
+// Applied to everything the app renders, so no button can bring the repeat back.
+const TIP_FILLER = new Set("a an the this that it its to of for on in your you step item".split(" "));
+const tipWords = t => t.toLowerCase().replace(/\((?:[a-z?\\/⌘↵]|esc|tab)\)/gi, " ").match(/[a-z0-9]+/g)?.map(w => w.replace(/(?:es|s)$/, "")).filter(w => !TIP_FILLER.has(w)) || [];
+const visibleText = el => { const c = el.cloneNode(true); c.querySelectorAll("kbd, .badge-dot").forEach(k => k.remove()); return c.textContent || ""; };
+function dedupeTitles(root) {
+  // Drop the tooltip when every word it uses is already on the button ("Mark done" / "Marks this step done.").
+  root.querySelectorAll?.("[title]").forEach(el => {
+    const text = new Set(tipWords(visibleText(el))), tip = tipWords(el.getAttribute("title"));
+    if (text.size && tip.length && tip.every(w => text.has(w))) el.removeAttribute("title");
+  });
+}
+new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => n.nodeType === 1 && dedupeTitles(n.parentElement || n))))
+  .observe(document.body, { childList: true, subtree: true });
+dedupeTitles(document);
+
 // The owner's own to-do: something no run turned into an item. Plan sends the note to the reviser to draft the steps.
 function openTodo() {
   ["todo-title", "todo-note", "todo-link", "todo-due"].forEach(k => $(k).value = ""); $("todo-plan").checked = false; $("todo-more").open = false;

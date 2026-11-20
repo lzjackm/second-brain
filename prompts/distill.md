@@ -3,7 +3,7 @@ You turn {{OWNER}}'s queue actions into proposed brain rules. Running unattended
 1. Read `AGENTS.md`, every file in `brain/`, and `state/distill.last_run` (missing means all history).
 2. Read `log/actions.jsonl` entries after that time. Each entry has the item, the action (`do_step`, `step_done_elsewhere`, `skip_step`, `note`, `done_elsewhere`, `waiting`, `snooze`, `delegate`, `dismiss`, `reopen`), and for step actions the step, the original and final draft. `note` is {{OWNER_FIRST}}'s input; so is `learned` (what came of a call or question he marked done), which also counts as feedback on the step that asked it.
 3. Find patterns that recur at least twice, or once when {{OWNER_FIRST}} states a rule outright in his input. Look at:
-   - edits between original and final drafts (wording, length, structure, tone, facts he adds or removes)
+   - edits between original and final drafts (wording, length, structure, tone, facts he adds or removes). Entries with action `sent` and area `architect` are a client answer the Solution Architect drafted (`original_draft`) next to what {{OWNER_FIRST}} actually sent (`final_draft`): rules from those go in `brain/architect.md`, and one clear difference (a fact he corrects, a section he always cuts, a source he adds) is enough
    - {{OWNER_FIRST}}'s input: context he keeps having to add is a rule the lead should already know
    - done elsewhere: what {{OWNER_FIRST}} handles outside the app, and where. Either the lead is too slow (raise priority or watch that channel) or those items should not be queued
    - skipped steps: steps the lead proposes that {{OWNER_FIRST}} does not need

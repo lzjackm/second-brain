@@ -247,11 +247,14 @@ def do_calendar(item, step):
 
 
 def edit_run(name, prompt, allowed):
+    """Run an edit job; returns its final reply (the run's log), so the caller can read what it says it did."""
     p = STATE / f"prompt-{name}.md"
     p.write_text(prompt)
     subprocess.run([str(ROOT / "bin" / "_claude.sh"), name, str(p), "--allowedTools", *allowed], cwd=ROOT,
                    env={**os.environ}, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     p.unlink(missing_ok=True)
+    logs = sorted((ROOT / "logs").glob(f"{name}-*.log"), key=lambda f: f.stat().st_mtime)
+    return logs[-1].read_text(errors="ignore") if logs else ""
 
 
 def git(*args, cwd=None):
@@ -316,14 +319,22 @@ def do_ledger(item, steps):
     body = CACHE / f"body-{uuid.uuid4().hex[:8]}.md"
     try:
         rows = "\n\n".join(f"### Step {s['id']} of {s['item_id']}\n{s.get('draft')}" for s in steps)
-        edit_run(f"execledger-{uuid.uuid4().hex[:6]}",
+        reply = edit_run(f"execledger-{uuid.uuid4().hex[:6]}",
                  f"Add these rows to the decision ledger checked out at {wt}. Follow {wt}/AGENTS.md. Edit only files inside "
                  f"{wt}; renumber an ID if it is already taken. Then write the pull request body to {body}: it lists every "
                  "change now in the PR" + (f", keeping what the current body already lists:\n\n{pr.get('body') or ''}\n\n" if pr else ".\n\n")
+                 + "If a step's change is already in the ledger (the same decision, already Locked or Superseded as the step asks), "
+                 "add nothing for it and end your reply with one line per such step: `ALREADY <step id>: <row id>`.\n\n"
                  + f"Rows to add:\n\n{rows}\n",
-                 ["Read", "Grep", "Glob", f"Edit({tilde(wt)}/**)", f"Write({tilde(wt)}/**)", f"Write({tilde(body)})"])
+                 # Claude Code governs file writes with Edit rules: a Write(...) rule alone was refused on every run (Nov 20).
+                 ["Read", "Grep", "Glob", f"Edit({tilde(wt)}/**)", f"Write({tilde(wt)}/**)", f"Edit({tilde(body)})", f"Write({tilde(body)})"])
         changed = [l[3:].strip('"') for l in git("status", "--porcelain", cwd=wt).splitlines()]
         if not changed:
+            # Nov 20: a step asked for a row the open PR already had (D337); "No rows were added" failed it on every retry.
+            already = dict(re.findall(r"ALREADY\s+(\S+?):\s*(\S+)", reply))
+            if already and all(s["id"] in already for s in steps):
+                rows_ = ", ".join(sorted(set(v.strip("`.,") for v in already.values())))
+                return f"already in the ledger ({rows_}); nothing to add", pr["url"] if pr else None
             raise Fail("No rows were added")
         bad = [f for f in changed if not LEDGER_FILES.search(f)]
         if bad:

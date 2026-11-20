@@ -71,3 +71,16 @@ class Discovery(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ZshGlobs(unittest.TestCase):
+    # Nov 20: `rm -f state/sa-lane-*-ID.json` with no match aborted architect.sh (zsh "no matches found" under set -e),
+    # so every Solution Architect run stopped in its first second. A bare glob in rm needs (N).
+    def test_rm_globs_allow_no_match(self):
+        import re
+        root = Path(__file__).resolve().parent.parent
+        for f in sorted((root / "bin").glob("*.sh")):
+            for n, line in enumerate(f.read_text().splitlines(), 1):
+                code = line.split("#", 1)[0]
+                if re.search(r"\brm\b", code) and re.search(r"\*[^\"']*(?:\s|$)", code) and "(N)" not in code:
+                    self.fail(f"{f.name}:{n}: rm with a glob needs (N): {line.strip()}")

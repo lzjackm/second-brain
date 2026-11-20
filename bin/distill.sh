@@ -6,5 +6,5 @@ R="${ROOT/#$HOME/~}"   # this folder as ~/..., for permission rules
 exec "$ROOT/bin/_claude.sh" distill "$ROOT/prompts/distill.md" \
   --allowedTools "Read" "Glob" "Grep" "Bash(date:*)" "Bash(jq:*)" \
   "Edit($R/queue/**)" "Write($R/queue/**)" \
-  "Write($R/state/distill.last_run)" "Bash(cat:*)" "Bash(wc:*)" \
+  "Write($R/state/distill.last_run)" "Edit($R/state/distill.last_run)" "Bash(cat:*)" "Bash(wc:*)" \
   

@@ -2,6 +2,11 @@
 
 Releases of the second-brain template. Run `/update-brain` to pull one in.
 
+## Unreleased (2026-11-20)
+
+Changed: app (2 files), bin (8 files), brain.example (1 files), prompts (5 files), tests (3 files).
+- (Describe the user-facing changes here before merging.)
+
 ## v0.5.10 (2026-11-20)
 
 - **Add your own to-dos.** A + on Needs me (or N, or "New to-do" in the command palette) adds an item from a title, with an optional note, link and due date. Tick "Have the brain plan the steps" and the brain drafts the steps from your note.
