@@ -305,6 +305,7 @@ body:not(.chat-open) #drawer { box-shadow: none; visibility: hidden; transition:
 .arow .aq { font-weight: 500; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; } .arow .meta { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--ink-3); }
 .aturn { display: flex; flex-direction: column; gap: 12px; margin-bottom: 8px; }
 .acard .ans { font-size: 15px; } .acard .ans p { color: var(--ink); } .acard .ans.plain { white-space: pre-wrap; line-height: 1.55; color: var(--ink); }
+.imgstrip { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; } .imgthumb { position: relative; display: inline-block; } .imgthumb img { height: 72px; max-width: 160px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); display: block; } .imgthumb .iconbtn { position: absolute; top: -8px; right: -8px; background: var(--raised); border: 1px solid var(--line); width: 22px; height: 22px; }
 .qcov { display: flex; flex-wrap: wrap; gap: 6px; } .flagc { color: var(--warn); }
 .inote { border-left: 2px solid var(--line-strong); padding: 2px 0 2px 12px; font-size: 13px; color: var(--ink-2); } .inote .lbl { font-size: 12px; color: var(--ink-3); font-weight: 500; margin-bottom: 4px; }
 .inote.warn { border-left-color: var(--warn); } .inote.bad { border-left-color: var(--bad); } .inote ul { margin: 4px 0; padding-left: 18px; } .inote p { margin: 4px 0; }
@@ -617,6 +618,7 @@ kbd { font: 500 11px/16px var(--font); color: var(--ink-3); background: var(--fi
 .claude .cmain .cabout { white-space: normal; } .claude code { font-family: var(--mono, ui-monospace, monospace); font-size: 12px; background: var(--field); padding: 1px 6px; border-radius: 4px; }
 .cset { font-size: 12px; color: var(--ink-3); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 2px; }
 .cset .chip.warn { cursor: pointer; }
+.todo-more { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; } #todo summary { cursor: pointer; font-size: 13px; }
 #csheet .dialog { width: 600px; max-height: 80vh; overflow: auto; }
 .cs-row { display: flex; flex-direction: column; gap: 6px; } .cs-k { font-size: 12px; font-weight: 600; color: var(--ink-2); } .cs-help { font-size: 12px; color: var(--ink-3); }
 .cs-areas { display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px; } .cs-areas label, .cs-req { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; }
@@ -632,6 +634,13 @@ kbd { font: 500 11px/16px var(--font); color: var(--ink-3); background: var(--fi
 <div class="overlay" id="pal"><div class="palette"><input id="pal-in" placeholder="Type a command or search items" autocomplete="off"><div class="plist" id="pal-list"></div></div></div>
 <div class="overlay" id="ask"><div class="dialog"><div class="h" id="ask-title"></div><div class="soft" id="ask-sub"></div><div id="ask-field"></div>
   <div class="actions"><button class="btn ghost" data-ask="cancel">Cancel <kbd>esc</kbd></button><button class="btn primary" data-ask="ok">Save <kbd>⌘↵</kbd></button></div></div></div>
+<div class="overlay" id="todo"><div class="dialog"><div class="h">New to-do</div>
+  <input class="text" id="todo-title" placeholder="What needs doing" maxlength="120">
+  <details id="todo-more"><summary class="soft">Note, link, due date</summary><div class="todo-more">
+    <textarea id="todo-note" rows="3" placeholder="Context: who, what, where it came from"></textarea>
+    <input class="text" id="todo-link" placeholder="Link (optional)"><input class="text" type="date" id="todo-due"></div></details>
+  <label class="cs-req"><input type="checkbox" id="todo-plan"> Have the brain plan the steps</label>
+  <div class="actions"><button class="btn ghost" data-todo="cancel">Cancel <kbd>esc</kbd></button><button class="btn primary" data-todo="ok">Add <kbd>⌘↵</kbd></button></div></div></div>
 <div class="overlay" id="csheet"><div class="dialog" id="csheet-body"></div></div>
 <div class="overlay" id="fbx"><div class="dialog"><div class="h">Feedback on this work</div>
   <div class="soft">Goes to the job that did it. The nightly learning run turns it into rules.</div>
@@ -702,6 +711,7 @@ const PENDING = ["todo", "queued", "failed"];
 const ICON = {
   plug: '<path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/>',
   video: '<path d="m16 13 5.22 3.48a.5.5 0 0 0 .78-.42V7.94a.5.5 0 0 0-.76-.43L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>',
+  plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
   left: '<path d="m15 18-6-6 6-6"/>', right: '<path d="m9 18 6-6-6-6"/>',
   inbox: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
   loader: '<path d="M21 12a9 9 0 1 1-6.22-8.56"/>', hourglass: '<path d="M5 22h14M5 2h14M17 22v-4.17a2 2 0 0 0-.59-1.42L12 12l-4.41 4.41A2 2 0 0 0 7 17.83V22M7 2v4.17a2 2 0 0 0 .59 1.42L12 12l4.41-4.41A2 2 0 0 0 17 6.17V2"/>',
@@ -859,7 +869,7 @@ function renderList() {
   $("list").innerHTML = `
     <div class="lhead"><div class="t">${VIEWS.find(v => v[0] === state.view)[1]}<span class="c">${items.length || ""}</span>
         ${state.type !== "all" && CATS[state.type] ? `<button class="fpill" data-type="all" title="Clear filter">${esc(CATS[state.type][0])}${icon("x")}</button>` : ""}
-        <span class="grow"></span>${types.length > 2 && state.view !== "done" ? `<button class="iconbtn" data-menu="filter" title="Filter by category">${icon("more")}</button>` : ""}</div></div>
+        <span class="grow"></span>${state.view === "queue" ? `<button class="iconbtn" data-todo="open" title="New to-do (N)">${icon("plus")}</button>` : ""}${types.length > 2 && state.view !== "done" ? `<button class="iconbtn" data-menu="filter" title="Filter by category">${icon("more")}</button>` : ""}</div></div>
     <div id="rows">${items.length ? items.map((i, n) => {
       const p = i.priority ?? 0, ss = steps(i), cs = curStep(i);
       return `<div class="row ${n === state.sel ? "sel" : ""} ${p >= 75 ? "p-hot" : ""}" data-n="${n}" data-id="${esc(i.id)}">
@@ -1169,7 +1179,7 @@ function commands() {
     c.push(["Item", "layers", state.expanded ? "Hide details" : "Show details", "m", toggleExpand]);
   }
   VIEWS.forEach(([k, l, ic], n) => c.push(["Go to", ic, l, String(n + 1), () => setView(k)]));
-  c.push(["App", "play", "Run leads now", "g", runLeads], ["App", "sun", "Toggle light or dark", "\\", toggleTheme]);
+  c.push(["App", "plus", "New to-do", "N", openTodo], ["App", "play", "Run leads now", "g", runLeads], ["App", "sun", "Toggle light or dark", "\\", toggleTheme]);
   state.items.filter(x => x.status !== "stale").forEach(x => c.push(["Items", "file", x.title, "", () => jumpTo(x)]));
   return c;
 }
@@ -1530,7 +1540,35 @@ setInterval(() => { if (state.view === "learn" && state.learn.slug && state.lear
 setInterval(() => { if (state.view === "learn" && !state.learn.slug && !isText() && document.querySelector(".ccard .dots")) renderCodex(); }, 3000);
 
 /* ---------- solutions architect ---------- */
-state.arch = { id: null, depth: "quick", q: null };
+state.arch = { id: null, depth: "exhaustive", q: null, imgs: {} };
+// Pasted images (Solution Architect): paste into the question, follow-up or Modify box; they upload at once and go
+// with that message. imgs[boxId] = [names]; a strip of thumbnails under the box shows them, each removable.
+const ARCH_BOXES = ["arch-q", "arch-f", "ask-in"];
+const imgUrl = n => `/api/architect-image/${encodeURIComponent(n)}?t=${CFG.token}`;
+function imgStrip(box) {
+  const el = $(box); if (!el) return;
+  let strip = document.getElementById("imgs-" + box);
+  if (!strip) { strip = document.createElement("div"); strip.id = "imgs-" + box; strip.className = "imgstrip"; el.after(strip); }
+  const xs = state.arch.imgs[box] || [];
+  strip.innerHTML = xs.map(n => `<span class="imgthumb"><img src="${imgUrl(n)}" alt="Pasted image"><button class="iconbtn" data-img-rm="${esc(box)}|${esc(n)}" title="Remove">${icon("x")}</button></span>`).join("");
+}
+const takeImgs = box => { const xs = state.arch.imgs[box] || []; state.arch.imgs[box] = []; document.getElementById("imgs-" + box)?.remove(); return xs; };
+document.addEventListener("paste", async e => {
+  const box = e.target?.id; if (state.view !== "architect" || !ARCH_BOXES.includes(box)) return;
+  const files = [...(e.clipboardData?.items || [])].filter(x => x.kind === "file" && x.type.startsWith("image/")).map(x => x.getAsFile());
+  if (!files.length) return;
+  e.preventDefault();
+  for (const f of files) {
+    if ((state.arch.imgs[box] || []).length >= 6) { toast("Up to 6 images per message", true); break; }
+    const data = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(f); });
+    const res = await fetch("/api/architect-image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ data }) });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) { toast(esc(j.error || "Couldn't add the image"), true); continue; }
+    (state.arch.imgs[box] = state.arch.imgs[box] || []).push(j.name); imgStrip(box);
+  }
+});
+document.addEventListener("click", e => { const b = e.target.closest("[data-img-rm]"); if (!b) return; const [box, n] = b.dataset.imgRm.split("|");
+  state.arch.imgs[box] = (state.arch.imgs[box] || []).filter(x => x !== n); imgStrip(box); });
 const ARCH_TAGS = ["Wrong facts", "Missed a source", "Outdated", "Too long", "Not client-ready", "Leaked internal", "Too narrow", "Great answer"];
 const CONF = { high: "ok", medium: "warn", low: "bad" };
 function renderArchitect() { return state.arch.id ? renderArchQ() : renderArchHome(); }
@@ -1542,7 +1580,7 @@ async function renderArchHome() {
   $("detail").innerHTML = `<div class="page" id="arch-page" style="max-width:960px">
     <div class="h">Solution Architect</div>
     <div class="askbox">
-      <textarea id="arch-q" rows="4" placeholder="${esc(CFG.modules?.architect?.placeholder || "Paste the client's question")}"></textarea>
+      <textarea id="arch-q" rows="4" placeholder="${esc(CFG.modules?.architect?.placeholder || "Paste the client's question, with screenshots if any")}"></textarea>
       <div class="bar"><input class="text" id="arch-ctx" placeholder="Client or context (optional)" style="flex:1; min-width:180px">
         <div class="seg"><button class="${A.depth === "quick" ? "on" : ""}" data-arch-depth="quick" title="ADRs, specs, docs and ledger; Slack only if needed">Quick</button><button class="${A.depth === "exhaustive" ? "on" : ""}" data-arch-depth="exhaustive" title="Every source, including Slack, Drive, Linear and recent PRs">Exhaustive</button></div>
         <button class="btn primary sm" data-arch-ask>${icon("search")}Find the answer</button></div>
@@ -1559,11 +1597,11 @@ function archTurn(t, n) {
   const src = c => (c.sources || []).map(x => `<div class="src"><b>${esc(x.label || "")}</b> <span class="mono">${esc(x.ref || "")}</span>${x.date ? ` · ${esc(x.date)}` : ""}${x.quote ? `<div class="quote">“${esc(x.quote)}”</div>` : ""}</div>`).join("");
   const list = (lbl, xs, cls = "") => xs.length ? `<div class="inote ${cls}"><div class="lbl">${lbl}</div><ul>${xs.map(x => `<li>${x}</li>`).join("")}</ul></div>` : "";
   return `<div class="aturn">
-    ${t.auto_tighten ? "" : `<div class="msg me"><div class="bubble">${t.kind === "revise" ? `<div class="who">Change requested</div>` : ""}<div class="text">${esc(t.question)}</div></div></div>`}
-    ${t.pending ? "" : t.error && !f ? `<div class="rec"><div class="txt" style="color:var(--bad)">${esc(firstSentence(t.error, 300))}</div></div>` : f ? `
+    ${t.auto_tighten ? "" : `<div class="msg me"><div class="bubble">${t.kind === "revise" ? `<div class="who">Change requested</div>` : ""}<div class="text">${esc(t.question)}</div>${(t.images || []).length ? `<div class="imgstrip">${t.images.map(n => `<a href="${imgUrl(n)}" target="_blank" rel="noopener" class="imgthumb"><img src="${imgUrl(n)}" alt="Image sent with the question"></a>`).join("")}</div>` : ""}</div></div>`}
+    ${t.pending ? "" : t.error && !f ? `<div class="rec"><div class="txt" style="color:var(--bad)">${esc(firstSentence(t.error, 300))}</div>${n === state.arch.q.turns.length - 1 ? `<button class="btn sm" data-arch-retry>${icon("undo")}Retry</button>` : ""}</div>` : f ? `
     <div class="card acard">
       <div class="chead"><span class="k">Answer</span>${f.confidence ? `<span class="tag ${CONF[f.confidence] || ""}">${esc(f.confidence)} confidence</span>` : ""}
-        <span class="muted" style="font-size:12px">${f.verified ? (tally.map(([k, v]) => `${v} ${k}`).join(" · ") || "checked") : "not checked by the reviewer"}</span><span class="grow"></span>
+        <span class="muted" style="font-size:12px">${f.confidence === "high" ? "every claim confirmed in a spec, ADR or code" : esc((f.confidence_why || []).join(" · "))}</span><span class="grow"></span>
         <button class="btn ghost sm" data-arch-modify="${n}">${icon("pen")}Modify</button><button class="btn ghost sm" data-arch-copy="${n}">${icon("copy")}Copy</button></div>
       <div class="cbody"><div class="ans plain">${esc(f.shareable_answer || "")}</div>
         ${(() => {  // closed by default; the summary says when something needs a look before sending
@@ -1617,16 +1655,18 @@ document.addEventListener("click", async e => {
   if ((el = q("[data-arch-depth]"))) { state.arch.depth = el.dataset.archDepth; el.parentElement.querySelectorAll("button").forEach(b => b.classList.toggle("on", b === el)); return; }
   if (q("[data-arch-ask]")) {
     const question = $("arch-q").value.trim(); if (!question) return $("arch-q").focus();
-    const j = await archPost(null, { question, context: $("arch-ctx").value.trim(), depth: state.arch.depth }); if (!j) return;
+    const j = await archPost(null, { question, context: $("arch-ctx").value.trim(), depth: state.arch.depth, images: takeImgs("arch-q") }); if (!j) return;
     state.arch.id = j.id; state.arch.q = null; return renderArchQ();
   }
   if ((el = q("[data-arch]"))) { state.arch.id = el.dataset.arch; state.arch.q = null; return renderArchQ(); }
+  if (q("[data-arch-retry]")) { if (await archPost(state.arch.id, { action: "retry" })) { state.arch.q = null; renderArchQ(); toast(icon("undo") + "Running again"); } return; }
   if (q("[data-arch-back]")) { state.arch.id = null; return renderArchHome(); }
-  if (q("[data-arch-follow]")) { const text = $("arch-f").value.trim(); if (!text) return; if (await archPost(state.arch.id, { action: "followup", text, depth: state.arch.depth })) { $("arch-f").value = ""; state.arch.q = null; renderArchQ(); } return; }
+  if (q("[data-arch-follow]")) { const text = $("arch-f").value.trim(); if (!text) return; if (await archPost(state.arch.id, { action: "followup", text, depth: state.arch.depth, images: takeImgs("arch-f") })) { $("arch-f").value = ""; state.arch.q = null; renderArchQ(); } return; }
   if ((el = q("[data-arch-modify]"))) {
-    const text = await ask({ title: "What should change?", sub: "It rewrites this answer and checks it again. Your note is also saved as feedback, so it can become a rule.", placeholder: "Don't offer a higher rate limit; say we'll review after launch. Shorter on point 2." });
+    state.arch.imgs["ask-in"] = [];
+    const text = await ask({ title: "What should change?", sub: "It rewrites this answer and checks it again. Your note is also saved as feedback, so it can become a rule.", placeholder: "Don't offer a higher rate limit; say we'll review after launch. Shorter on point 2. Paste a screenshot if it helps." });
     if (!text) return;
-    if (await archPost(state.arch.id, { action: "revise", text, turn: +el.dataset.archModify, depth: state.arch.depth })) { state.arch.q = null; renderArchQ(); toast(icon("pen") + "Rewriting"); }
+    if (await archPost(state.arch.id, { action: "revise", text, turn: +el.dataset.archModify, depth: state.arch.depth, images: takeImgs("ask-in") })) { state.arch.q = null; renderArchQ(); toast(icon("pen") + "Rewriting"); }
     return;
   }
   if ((el = q("[data-arch-copy]"))) { const t = state.arch.q.turns[+el.dataset.archCopy]; await navigator.clipboard.writeText(t.final.shareable_answer || ""); archPost(state.arch.id, { action: "copied" }); return toast(icon("copy") + "Answer copied"); }
@@ -1634,7 +1674,7 @@ document.addEventListener("click", async e => {
   if (q("[data-arch-archive]")) { if (confirm("Archive this question?")) { await archPost(state.arch.id, { action: "archive" }); state.arch.id = null; renderArchHome(); } }
 });
 document.addEventListener("keydown", e => {
-  if ((e.target.id === "arch-q" || e.target.id === "arch-f") && e.key === "Enter" && e.metaKey) { e.preventDefault(); document.querySelector(e.target.id === "arch-q" ? "[data-arch-ask]" : "[data-arch-follow]")?.click(); }
+  if ((e.target.id === "arch-q" || e.target.id === "arch-f") && e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); document.querySelector(e.target.id === "arch-q" ? "[data-arch-ask]" : "[data-arch-follow]")?.click(); }
 }, true);
 setInterval(() => { if (state.view !== "architect") return; if (state.arch.id && state.arch.q?.busy) renderArchQ(); else if (!state.arch.id && !isText() && document.querySelector(".arow .dots")) renderArchHome(); }, 2000);
 
@@ -1951,7 +1991,7 @@ document.addEventListener("keydown", e => {
     n: () => s && !isOwner(s.owner) && !isAgent(s.owner) && stepAct("nudge"),
     X: () => itemAct("done_elsewhere"), w: () => itemAct("waiting"), s: () => itemAct("snooze"), d: () => itemAct("delegate"), r: () => itemAct("dismiss"), u: () => itemAct("reopen"),
     c: () => state.chat && state.mode === "ask" ? setChat(false) : openChat("ask"), i: () => openChat("note"), e: () => $("draft")?.focus(), m: toggleExpand,
-    g: runLeads, "\\": toggleTheme, "?": openPalette, "/": openPalette,
+    N: openTodo, g: runLeads, "\\": toggleTheme, "?": openPalette, "/": openPalette,
   };
   if (/^[1-8]$/.test(e.key)) { setView(VIEWS[+e.key - 1][0]); e.preventDefault(); return; }
   if (map[e.key]) { map[e.key](); e.preventDefault(); }
@@ -2080,6 +2120,29 @@ function openSheet(name) {
   state.conn.open = name; state.conn.draft = { role: c.role || "watch", cadence: c.cadence || "every", areas: [...(c.areas || [])], required: !!c.required, use: c.use || "" };
   renderSheet();
 }
+// The owner's own to-do: something no run turned into an item. Plan sends the note to the reviser to draft the steps.
+function openTodo() {
+  ["todo-title", "todo-note", "todo-link", "todo-due"].forEach(k => $(k).value = ""); $("todo-plan").checked = false; $("todo-more").open = false;
+  $("todo").classList.add("show"); setTimeout(() => $("todo-title").focus(), 0);
+}
+const closeTodo = () => $("todo").classList.remove("show");
+async function saveTodo() {
+  const body = { title: $("todo-title").value.trim(), note: $("todo-note").value.trim(), link: $("todo-link").value.trim(), due: $("todo-due").value || null, plan: $("todo-plan").checked };
+  if (!body.title) return $("todo-title").focus();
+  if (body.plan && !body.note && !body.link) { $("todo-more").open = true; return toast("Add a note or link to plan from", true); }
+  const r = await fetch("/api/items", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const j = await r.json().catch(() => ({})); if (!r.ok) return toast(esc(j.error || "That didn't work"), true);
+  closeTodo();
+  state.items = (await (await fetch("/api/items")).json()).filter(i => i.type !== "meeting");
+  const it = state.items.find(i => i.id === j.id);
+  if (it) jumpTo(it); else render();
+  toast(icon("check") + (body.plan ? "Added. Planning the steps" : "Added"));
+}
+document.addEventListener("click", e => { const b = e.target.closest("[data-todo]"); if (b) return b.dataset.todo === "open" ? openTodo() : b.dataset.todo === "ok" ? saveTodo() : closeTodo(); if (e.target.id === "todo") closeTodo(); });
+document.addEventListener("keydown", e => {
+  if (!$("todo").classList.contains("show")) return;
+  if (e.key === "Escape") { e.stopPropagation(); closeTodo(); } else if (e.key === "Enter" && (e.metaKey || e.target.id === "todo-title")) { e.preventDefault(); e.stopPropagation(); saveTodo(); }
+}, true);
 const closeSheet = () => { state.conn.open = state.conn.draft = null; $("csheet").classList.remove("show"); };
 $("csheet").addEventListener("click", async e => {
   const C = state.conn, d = C.draft, c = connFind(C.open), q = s => e.target.closest(s); let el;

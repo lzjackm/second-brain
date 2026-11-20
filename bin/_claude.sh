@@ -124,8 +124,13 @@ CPID=$!
 caffeinate -i -w $CPID &
 # Wall-clock deadline, checked every 30s: a plain `sleep N` pauses while the Mac sleeps, so it never fired on runs that started in a dark wake.
 DEADLINE=$(( $(date +%s) + LIMIT * 60 ))
+STALL=${JB_STALL_MIN:-8}
 ( while kill -0 $CPID 2>/dev/null; do
     if (( $(date +%s) >= DEADLINE )); then echo "timed out after ${LIMIT} min" >> "$LOG.err"; kill $CPID; sleep 5; kill -9 $CPID 2>/dev/null; break; fi
+    # A hung model call writes nothing: no trace event for STALL minutes means it won't recover (Nov 20: a verify run
+    # sat silent for 25 minutes until the deadline). Kill it and let it retry once below.
+    if (( $(date +%s) - $(stat -f %m "$LOG.trace.jsonl" 2>/dev/null || date +%s) >= STALL * 60 )); then
+      echo "stalled: no activity for ${STALL} min" >> "$LOG.err"; touch "$LOG.stalled"; kill $CPID; sleep 5; kill -9 $CPID 2>/dev/null; break; fi
     sleep 30
   done ) &
 WATCH=$!
@@ -197,6 +202,21 @@ if need == "1":
 with open(usage, "a") as fh:
     fh.write(json.dumps(rec) + "\n")
 PY
+# A token that expired mid-session passes the sign-in check above, then every call fails with 401 (Nov 20: an
+# architect pass overnight). Say so plainly, in the log the app shows and as a notification.
+if grep -qs "OAuth access token has expired\|Failed to authenticate" "$LOG.err" "$LOG"; then
+  echo "Claude's sign-in expired. Run /login in Claude Code (or claude auth login in Terminal), then retry." > "$LOG"
+  alert "Claude's sign-in expired" "Runs fail until you sign in again: /login in Claude Code."
+fi
+if [[ -f "$LOG.stalled" ]]; then
+  rm -f "$LOG.stalled"
+  if [[ -z "${JB_RETRY:-}" ]]; then
+    echo "$NAME: stalled, retrying once" >&2
+    rm -rf "$LOCK"; trap - EXIT
+    JB_RETRY=1 exec "$0" "$NAME" "$PROMPT_FILE" "$@"
+  fi
+  alert "$NAME stalled twice" "The model stopped responding. Check your connection or Claude status."
+fi
 if [[ -f "$LOG.noconn" ]]; then
   rm -f "$LOG.noconn"
   if [[ -z "${JB_RETRY:-}" ]]; then

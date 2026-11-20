@@ -58,7 +58,41 @@ def touched(item):
     return any(h.get("by") == OWNER for h in item.get("history", []))
 
 
+def same_key(a, b):
+    """One key is one underlying thing (queue/SCHEMA.md): the same key twice is a duplicate whatever the wording."""
+    return bool(a.get("key")) and a.get("key") == b.get("key")
+
+
+def closed_again(area=None):
+    """A Slack saved message the owner already closed (done, dismissed) is not their to-do again: a run that recreated
+    it is undone here."""
+    closed, live = set(), []
+    for f in sorted(ITEMS.glob("*.json")):
+        try:
+            it = json.loads(f.read_text())
+        except (json.JSONDecodeError, OSError):
+            continue
+        k = it.get("key") or ""
+        if not k.startswith("slack-saved:"):
+            continue
+        if it.get("status") in LIVE:
+            live.append((f, it))
+        elif it.get("status") in ("done", "dismissed", "delegated"):
+            closed.add((k, it.get("created", "")))
+    now = datetime.now(ZoneInfo("America/New_York")).isoformat(timespec="seconds")
+    for f, it in live:
+        if (area and it.get("area") != area) or touched(it):
+            continue
+        if any(k == it["key"] and c < it.get("created", "") for k, c in closed):
+            it["status"] = "stale"
+            it["updated"] = now
+            it.setdefault("history", []).append({"ts": now, "by": "dedupe", "event": "already closed by the owner (same saved Slack message)"})
+            f.write_text(json.dumps(it, indent=2, ensure_ascii=False))
+            print(f"closed before: {it['id']}")
+
+
 def main(area=None):
+    closed_again(area)
     items = []
     for f in sorted(ITEMS.glob("*.json")):
         try:
@@ -71,11 +105,11 @@ def main(area=None):
     now = datetime.now(ZoneInfo("America/New_York")).isoformat(timespec="seconds")
     for i, (fa, a, ma) in enumerate(items):
         for fb, b, mb in items[i + 1:]:
-            if fa in gone or fb in gone or a.get("area") != b.get("area") or not (ma & mb):
+            if fa in gone or fb in gone or a.get("area") != b.get("area") or not (ma & mb or same_key(a, b)):
                 continue
             # A shared message is not enough on its own: a busy group thread or a handoff message is cited by
             # different items. Require the items to be about the same thing too.
-            if not same_thing(a, b):
+            if not (same_key(a, b) or same_thing(a, b)):
                 continue
             if touched(a) and touched(b):
                 print(f"both touched, left alone: {a['id']} and {b['id']}")
@@ -83,7 +117,7 @@ def main(area=None):
             keep, drop, fdrop = (a, b, fb) if touched(a) or (not touched(b) and a.get("created", "") <= b.get("created", "")) else (b, a, fa)
             drop["status"] = "stale"
             drop["updated"] = now
-            drop.setdefault("history", []).append({"ts": now, "by": "dedupe", "event": f"duplicate of {keep['id']} (same Slack message)"})
+            drop.setdefault("history", []).append({"ts": now, "by": "dedupe", "event": f"duplicate of {keep['id']} (same {'key' if same_key(a, b) else 'Slack message'})"})
             fdrop.write_text(json.dumps(drop, indent=2, ensure_ascii=False))
             gone.add(fdrop)
             print(f"merged: {drop['id']} -> {keep['id']}")

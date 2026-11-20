@@ -2,6 +2,21 @@
 
 Releases of the second-brain template. Run `/update-brain` to pull one in.
 
+## v0.5.10 (2026-11-20)
+
+- **Add your own to-dos.** A + on Needs me (or N, or "New to-do" in the command palette) adds an item from a title, with an optional note, link and due date. Tick "Have the brain plan the steps" and the brain drafts the steps from your note.
+- **Slack Saved for later becomes to-dos.** With Slack connected, each message you save for later becomes a Needs me item, and clearing it in Slack closes the item. One area owns these, so there are no duplicates.
+- **Solution Architect answers are more complete and more reliable:**
+  - Thorough search is the default. It searches Slack and every other source, so answers include dates and plans that live only in threads.
+  - Answers use the client's own question numbers.
+  - An answer that says "no date" or "not published" without having searched Slack is sent back once to check.
+  - Stated plans and target dates go in the answer, worded as plans.
+  - A question about moving funds or integrating gets every route that exists, each with its status.
+  - Messages with several questions get more room: 55 words per numbered question.
+  - Failed answers have a Retry button, and pasted images go along with the question.
+  - Enter sends; Shift+Enter adds a line.
+- **Runs recover on their own.** A run that goes 8 minutes without any activity is stopped and retried once, and an expired Claude sign-in sends a notification telling you to sign in again.
+
 ## v0.5.9 (2026-11-18)
 
 - **Faster meeting agendas.** Prep starts with the meeting, the agenda's source rows, your rules and the ledger's recent changes already in its brief, and checks the at-risk rows' status in up to three parallel lanes before one run writes the agenda (about 2 minutes, was 4 to 7).

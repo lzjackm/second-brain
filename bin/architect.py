@@ -6,6 +6,7 @@ Usage: architect.py prompt <id> <out.md>            the answer prompt for the la
        architect.py apply <id> <answer-log> <verify-log>
 A question lives in architect/<id>.json; each follow-up is a new turn with its own answer and review.
 """
+import collections
 import json
 import re
 import sys
@@ -63,17 +64,100 @@ def sa_fill(tpl):
             .replace("{{SA_CONFLICTS}}", f"   - Is the topic listed in `{cf}` as a conflict?\n" if cf else ""))
 
 
+def confidence(final):
+    """Confidence from the checker's results, not the model's self-rating (Nov 18: 10 of 14 answers said "medium" with no
+    rule behind it). Returns (level, reasons): what keeps it from high, in a few words each.
+    high: every claim the answer rests on confirmed against its source and backed by an ADR, spec or code; nothing
+          refuted; sources agree; every client question answered.
+    low:  a claim it rests on refuted or unsupported, or a client question unanswered.
+    medium: the rest (a claim only in docs or Slack, a partial answer, a claim left unchecked). A claim the checker corrected
+            counts as confirmed (the answer now carries the corrected text), and logged source disagreements stay in the
+            checks section: the answer already follows the higher-authority source."""
+    claims = [c for c in final.get("claims") or [] if c.get("shareable") is not False]
+    oc = collections.Counter(c.get("outcome") for c in claims)
+    qs = final.get("questions") or []
+    low, mid = [], []
+    if oc["refuted"] or oc["unsupported"]:
+        low.append(f"{oc['refuted'] + oc['unsupported']} claim{'s' if oc['refuted'] + oc['unsupported'] > 1 else ''} not backed by a source")
+    unans = sum(1 for q in qs if q.get("answered") == "no")
+    if unans:
+        low.append(f"{unans} question{'s' if unans > 1 else ''} unanswered")
+    if not final.get("verified"):
+        mid.append("not checked by the reviewer")
+    if oc[None] and final.get("verified"):
+        mid.append(f"{oc[None]} claim{'s' if oc[None] > 1 else ''} unchecked")
+    if final.get("unconfirmed"):
+        n = len(final["unconfirmed"])
+        mid.append(f"{n} claim{'s' if n > 1 else ''} only in docs or Slack")
+    part = sum(1 for q in qs if q.get("answered") == "partly")
+    if part:
+        mid.append(f"{part} question{'s' if part > 1 else ''} partly answered")
+    if not claims:
+        mid.append("no sourced claims")
+    return ("low", low + mid) if low else ("medium", mid) if mid else ("high", [])
+
+
 def words(t):
     return len(re.findall(r"\S+", t or ""))
 
 
+def numbers(text):
+    """The question numbers a message uses: "1." or "1)" at the start of a line, and in an answer also "1 and 2.",
+    "1/2." or "1-2." (one block answering several)."""
+    out = set()
+    for m in re.finditer(r"(?m)^\s*(\d{1,2})(?:\s*(?:and|/|-|,|&)\s*(\d{1,2}))*\s*[.)]", text or ""):
+        out |= {int(x) for x in re.findall(r"\d{1,2}", m.group(0))}
+    return out
+
+
 def limit(q, turn):
-    """Longest the shareable answer may be (V10): about the client's own length, between 50 and 160 words."""
-    return max(50, min(160, round(1.2 * words(client_q(q, turn)))))
+    """Longest the shareable answer may be (V10): about the client's own length, at least 50 words, at most 160 or
+    55 words per numbered question, whichever is more. Nov 19: a five-question message got 160 words and lost the
+    sources it had found."""
+    cq = client_q(q, turn)
+    return max(50, min(max(160, 55 * len(numbers(cq))), round(1.2 * words(cq))))
+
+
+NEG = re.compile(r"\b(no date|has no date|with no date|no timeline|not (?:yet )?(?:published|announced|decided|set|confirmed)|"
+                 r"(?:aren't|isn't|is not|are not) (?:yet )?(?:published|announced|decided|set|confirmed)|unconfirmed|not yet on)\b", re.I)
+
+
+def slack_searched(q, turn):
+    """Whether this answer's run (or the run it revises) searched Slack."""
+    base = q["turns"][turn["revises"]] if turn.get("kind") == "revise" else turn
+    logs = ((base.get("final") or base.get("answer") or {}).get("searched") or []) + ((turn.get("answer") or {}).get("searched") or [])
+    return any("slack" in str(x).lower() and "not searched" not in str(x).lower() for x in logs)
+
+
+def problems(q, turn, final):
+    """What code checks before the owner reads an answer, as instructions for the one automatic pass."""
+    ans, out = final.get("shareable_answer") or "", []
+    want, got = numbers(client_q(q, turn)), numbers(ans)
+    if want and (want - got or got - want):
+        out.append(f"Number the answer with the client's own question numbers ({', '.join(map(str, sorted(want)))}), one block "
+                   "per question, or \"1/2.\" when one block answers both; never renumber by topic.")
+    neg = sorted({m.group(0) for m in NEG.finditer(ans)})
+    if neg and not slack_searched(q, turn):
+        out.append(f"The answer says {', '.join(repr(x) for x in neg)} but Slack was not searched. Search Slack (several "
+                   "phrasings, the last 30 days) and the ledger for each before keeping it: dates and plans usually live there. "
+                   "Add what you find, with its source, and log the searches in `searched`.")
+    return out
 
 
 def with_limit(tpl, q, turn):
-    return tpl.replace("{{SA_LIMIT}}", str(limit(q, turn)))
+    return tpl.replace("{{SA_LIMIT}}", str(limit(q, turn))) + images_block(q, turn)
+
+
+def images_block(q, turn):
+    """Images pasted with the client's message (and with a change request): part of the question, opened with Read."""
+    base = q["turns"][turn["revises"]] if turn.get("kind") == "revise" else turn
+    imgs = list(dict.fromkeys((base.get("images") or []) + (turn.get("images") or [])))
+    imgs = [n for n in imgs if (ROOT / "architect" / "images" / n).is_file()]
+    if not imgs:
+        return ""
+    return ("\n\n## Images sent with the question\n\nOpen each with Read before answering; they are part of what was asked "
+            "(screenshots of errors, UI, docs or data). Quote what they show when an answer depends on it.\n"
+            + "\n".join(f"- `architect/images/{n}`" for n in imgs) + "\n")
 
 
 def prompt(i, out):
@@ -116,6 +200,10 @@ def verify_prompt(i, log, out):
     if turn.get("kind") == "revise":
         tpl = tpl.replace("## Do this", "## The owner's instructions for this rewrite (authoritative)\n" + turn["question"] +
                           "\n\nHonor them in your final answer and never undo them, including length and format limits. If one conflicts with answering every client question, fit the answers inside his limit (combine points) rather than breaking it.\n\n## Do this", 1)
+    import prose_lint  # noqa: E402  (declauding's linter)
+    tics = prose_lint.summary(ans.get("shareable_answer") or "", 6)
+    if tics:   # fixed here, in the verify run, instead of in an extra pass afterwards (Nov 20: that pass added 4 minutes)
+        tpl = tpl.replace("## Do this", f"## Also fix\nRewrite these AI-prose tics in the shareable answer as plain statements (S19): {tics}.\n\n## Do this", 1)
     Path(out).write_text(with_limit(tpl, q, q["turns"][-1]).replace("{{NOW}}", now()).replace("{{QUESTION}}", client_q(q, q["turns"][-1]))
                          .replace("{{ANSWER}}", json.dumps(ans, indent=1, ensure_ascii=False)))
 
@@ -160,17 +248,24 @@ def apply(i, alog, vlog):
         final["voice_fixes"] = ver.get("voice_fixes") or []
         final["verified"] = True
     final["unconfirmed"] = checks.architect_claims(final["claims"])  # K10
+    final["model_confidence"] = final.get("confidence")
+    final["confidence"], final["confidence_why"] = confidence(final)
     turn["final"] = final
     q["status"] = "done"
     over = words(final.get("shareable_answer")) - limit(q, turn)
     import prose_lint  # noqa: E402  (declauding's linter)
-    tics = prose_lint.summary(final.get("shareable_answer") or "", 6)
-    if (over > 0 or tics) and not turn.get("auto_tighten"):
-        # V10 in code: an answer over the limit gets one automatic tightening pass before the owner reads it.
+    tics = prose_lint.summary(final.get("shareable_answer") or "", 6) if not ver else ""   # verify already fixed them
+    fixes = problems(q, turn, final)
+    final["code_flags"] = fixes
+    # A few words over is not worth a second answer and verify run (about 4 minutes): 10% slack.
+    if (over > limit(q, turn) // 10 or tics or fixes) and not turn.get("auto_tighten"):
+        # V10 and the checks above in code: one automatic pass before the owner reads it.
         n = limit(q, turn)
-        q["turns"].append({"question": f"Cut the shareable answer to at most {n} words (it is {words(final.get('shareable_answer'))}). "
-                           "Keep every verdict, number and needed ask; drop greetings, closing questions, explanations the client "
-                           "didn't ask for, second options and follow-up promises (brain/architect-voice.md V02 to V10)."
+        q["turns"].append({"question": " ".join(fixes)
+                           + (f" Cut the shareable answer to at most {n} words (it is {words(final.get('shareable_answer'))}). "
+                              "Keep every verdict, number, source-backed detail and needed ask; drop greetings, closing questions, "
+                              "explanations the client didn't ask for and follow-up promises (brain/architect-voice.md V02 to V10)."
+                              if over > 0 else "")
                            + (f" Also rewrite these AI-prose tics as plain statements (S19): {tics}." if tics else ""),
                            "kind": "revise", "revises": len(q["turns"]) - 1, "depth": turn.get("depth", "quick"), "ts": now(),
                            "pending": now(), "auto_tighten": True})

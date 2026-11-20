@@ -7,6 +7,16 @@ source "${0:A:h}/_env.zsh"   # PATH for Homebrew and Claude Code: the app and la
 ROOT="${0:A:h:h}"; ID="$1"; PY=/opt/homebrew/bin/python3
 R="${ROOT/#$HOME/~}"   # this folder as ~/..., for permission rules
 [[ "$ID" =~ ^[a-z0-9-]+$ && -f "$ROOT/architect/$ID.json" ]] || { echo "no question $ID"; exit 1; }
+# One lock for the whole run (answer, verify, apply, tightening pass), so the app never sees the gap between the
+# answer and verify runs as a dead run and fails the turn (Nov 19: a finished tightening pass was marked failed).
+# The tightening pass re-execs with the same pid, which keeps this lock.
+RLOCK="$ROOT/state/architect-run-$ID.lock"
+if ! mkdir "$RLOCK" 2>/dev/null; then
+  P=$(cat "$RLOCK/pid" 2>/dev/null || echo "")
+  [[ -n "$P" && "$P" != "$$" ]] && kill -0 "$P" 2>/dev/null && { echo "architect $ID already running"; exit 0; }
+fi
+echo $$ > "$RLOCK/pid"
+trap 'rm -rf "$RLOCK"' EXIT
 "$ROOT/bin/prefetch-sa.sh" || true
 READ=(
   "Read" "Glob" "Grep" "WebSearch" "WebFetch"
@@ -17,11 +27,15 @@ READ=(
 DENY=("Edit" "Write" "NotebookEdit" "Bash(gh pr create:*)" "Bash(gh pr comment:*)" "Bash(gh pr merge:*)" "Bash(gh issue create:*)" "Bash(gh issue comment:*)" "Agent")
 DIRS=(${(f)"$($PY -I -c 'import json,os,sys; m=(json.load(open(sys.argv[1])).get("modules") or {}).get("architect") or {}; print("\n".join(os.path.expanduser(d) for d in m.get("search_dirs") or ["~/Projects"]))' "$ROOT/config/brain.json")"})
 A="$ROOT/state/prompt-architect-$ID.md"; V="$ROOT/state/prompt-architect-verify-$ID.md"
-$PY -I "$ROOT/bin/architect.py" prompt "$ID" "$A"
-S=$(date +%s)
-"$ROOT/bin/_claude.sh" "architect-$ID" "$A" --add-dir "${DIRS[@]}" "$HOME/.claude/projects/${HOME//[\/.]/-}/memory" --allowedTools "${READ[@]}" --disallowedTools "${DENY[@]}" || true
-ALOG=$(ls -t "$ROOT"/logs/architect-$ID-*.log 2>/dev/null | grep -v verify | head -1 || true)
-(( $(stat -f %m "$ALOG" 2>/dev/null || echo 0) >= S )) || ALOG=""
+if [[ -n "${ARCH_ALOG:-}" && -f "$ARCH_ALOG" ]]; then
+  ALOG="$ARCH_ALOG"   # resume: check and apply an answer that already ran (ARCH_ALOG=<its log>)
+else
+  $PY -I "$ROOT/bin/architect.py" prompt "$ID" "$A"
+  S=$(date +%s)
+  "$ROOT/bin/_claude.sh" "architect-$ID" "$A" --add-dir "${DIRS[@]}" "$HOME/.claude/projects/${HOME//[\/.]/-}/memory" --allowedTools "${READ[@]}" --disallowedTools "${DENY[@]}" || true
+  ALOG=$(ls -t "$ROOT"/logs/architect-$ID-*.log 2>/dev/null | grep -v "/architect-verify-" | head -1 || true)
+  (( $(stat -f %m "$ALOG" 2>/dev/null || echo 0) >= S )) || ALOG=""
+fi
 VLOG=""
 if [[ -n "$ALOG" ]]; then
   $PY -I "$ROOT/bin/architect.py" verify-prompt "$ID" "$ALOG" "$V"
@@ -34,5 +48,5 @@ if [[ -n "$ALOG" ]]; then
 fi
 OUT=$($PY -I "$ROOT/bin/architect.py" apply "$ID" "$ALOG" "$VLOG")
 # Over the length limit (V10): one automatic tightening pass, then the owner sees the result.
-[[ "$OUT" == *TIGHTEN* && -z "${ARCH_TIGHTENED:-}" ]] && ARCH_TIGHTENED=1 exec "$0" "$ID"
+[[ "$OUT" == *TIGHTEN* && -z "${ARCH_TIGHTENED:-}" ]] && ARCH_TIGHTENED=1 exec "$0" "$ID"   # exec drops the trap; the next run sets it again
 true

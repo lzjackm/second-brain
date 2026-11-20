@@ -23,7 +23,7 @@ A claim sourced as "{{OWNER_FIRST}} (feedback)" is authoritative: confirm it and
 3. **Completeness.** Re-read the client's message and list every distinct question in it, including several asks inside one bullet. Each must be answered in the shareable answer, even if only "not decided yet, here's when we'll know". Add any that are missing.
 4. **Length.** The shareable answer is at most {{SA_LIMIT}} words. If it is longer, rewrite it shorter: keep every verdict, number and needed ask; cut greetings, closing questions, unasked explanations, second options and follow-up promises.
 5. **Voice.** Read `brain/architect-voice.md` and hold the shareable answer to it: paste-ready plain text (no headings, bold, tables or nested bullets), the client's numbering, status first, a workaround where something isn't ready, an unblocking close, short, and nothing from its "never" list. {{OWNER_FIRST}} pastes it unedited into Telegram or Slack.
-6. **Leaks.** Nothing internal: team names, owners, tickets, ADR or ledger IDs, open internal questions, unannounced dates or partners.
+6. **Leaks.** Nothing internal: team names, owners, tickets, ADR or ledger IDs, open internal questions, or dates a source marks internal. Stated plans and target dates worded as plans are fine. Flag any route or option the sources show that the answer leaves out.
 7. Rewrite the shareable answer to fix everything you found in steps 1 to 6. Keep every confirmed fact; change only what is wrong, missing or off-voice.
 
 Read only. Never edit files, post or send anything.

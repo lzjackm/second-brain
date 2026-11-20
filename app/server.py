@@ -32,7 +32,7 @@ SYNOPSIS = ROOT / "synopsis"
 STATE = ROOT / "state"
 INDEX = Path(__file__).resolve().parent / "index.html"
 ET = ZoneInfo("America/New_York")
-PORT = int(sys.argv[1]) if len(sys.argv) > 1 else int((json.loads((ROOT / "config" / "brain.json").read_text()) if (ROOT / "config" / "brain.json").exists() else {}).get("port") or 7878)   # main() may move it
+PORT = int(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].isdigit() else int((json.loads((ROOT / "config" / "brain.json").read_text()) if (ROOT / "config" / "brain.json").exists() else {}).get("port") or 7878)   # main() may move it
 # A fresh secret per launch, embedded in the page: every /api call must carry it, so other sites and other local
 # pages cannot drive the app even when the browser sends the request.
 TOKEN = secrets.token_urlsafe(32)
@@ -715,6 +715,40 @@ def apply_queue_update(source_id, step, ts):
                            + (f", created {len(created)}" if created else "")}
 
 
+def new_todo(body):
+    """The owner's own to-do: something they know about that no run turned into an item. One step of theirs; with
+    `plan`, the reviser drafts the steps from the note, as Redraft does."""
+    title = (body.get("title") or "").strip()[:120]
+    note = (body.get("note") or "").strip()[:2000]
+    link = (body.get("link") or "").strip()[:500]
+    due = body.get("due") or None
+    area = identity.CFG.get("default_area") or "main"
+    if not title:
+        return 400, {"error": "Give it a title"}
+    if link and not re.match(r"https?://", link):
+        return 400, {"error": "The link must start with http"}
+    if due and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", due):
+        return 400, {"error": "Due is a date"}
+    if not ID_RE.match(area):
+        return 400, {"error": "unknown area"}
+    ts = now()
+    iid = f"{area}-{datetime.now(ET):%Y%m%d-%H%M}-{meetings.slug(title)}-{uuid.uuid4().hex[:4]}"
+    step = {"id": "s1", "text": title, "owner": OWNER, "status": "todo", "execute": {"kind": "none", **({"url": link} if link else {})}}
+    plan = bool(body.get("plan")) and (ROOT / "leads" / f"{area}.md").exists()
+    item = {"id": iid, "key": f"own:{iid}", "area": area, "type": "action", "category": "action", "title": title,
+            "context": note.split("\n")[0][:160], "why_owner": "You added it", "made_by": OWNER, "due": due,
+            "evidence": [{"label": "link", "url": link}] if link else [], "steps": [step],
+            "notes": [{"ts": ts, "text": f"Plan the steps for this to-do from the note{' and the link' if link else ''}: {note}",
+                       "redraft": True, "action": "note"}] if plan else [],
+            "redraft_requested": ts if plan else None, "created": ts, "updated": ts,
+            "history": [{"ts": ts, "by": OWNER, "event": "created"}]}
+    item["status"] = compute_status(item)
+    write_json(ITEMS / f"{iid}.json", item)
+    if plan and not lock_live(f"revise-{area}"):
+        spawn("revise.sh", area)
+    return 200, {"ok": True, "id": iid}
+
+
 def monday_of(date):
     d = datetime.fromisoformat(date).date() if re.fullmatch(r"\d{4}-\d{2}-\d{2}", date or "") else datetime.now(ET).date()
     return d - timedelta(days=d.weekday())
@@ -1040,6 +1074,36 @@ def learn_post(slug, body):
 
 
 ARCH = ROOT / "architect"
+ARCH_IMG = ARCH / "images"
+IMG_MAX = 8_000_000
+IMG_KINDS = {b"\x89PNG": "png", b"\xff\xd8\xff": "jpg", b"GIF8": "gif", b"RIFF": "webp"}
+IMG_NAME = re.compile(r"^[0-9a-f]{16}\.(png|jpg|gif|webp)$")
+
+
+def arch_image_save(body):
+    """A pasted image for a Solution Architect question: checked by its first bytes (not the name it came with), saved
+    under architect/images/, named by a random id. The question's turn lists it; the agent opens it with Read."""
+    import base64
+    data = body.get("data") or ""
+    m = re.match(r"^data:image/[a-z+]+;base64,(.+)$", data, re.S)
+    try:
+        raw = base64.b64decode(m.group(1), validate=True) if m else b""
+    except ValueError:
+        raw = b""
+    ext = next((e for magic, e in IMG_KINDS.items() if raw.startswith(magic)), None)
+    if ext == "webp" and raw[8:12] != b"WEBP":
+        ext = None
+    if not ext or len(raw) > IMG_MAX:
+        return 400, {"error": "Paste a PNG, JPEG, GIF or WebP image under 8 MB"}
+    ARCH_IMG.mkdir(parents=True, exist_ok=True)
+    name = f"{uuid.uuid4().hex[:16]}.{ext}"
+    (ARCH_IMG / name).write_bytes(raw)
+    return 200, {"name": name}
+
+
+def arch_images(body):
+    """The pasted images a question, follow-up or change request carries: existing files only, at most 6."""
+    return [n for n in (body.get("images") or [])[:6] if isinstance(n, str) and IMG_NAME.match(n) and (ARCH_IMG / n).is_file()]
 ARCH_TOOL_LABEL = {"Grep": "Searched", "Glob": "Listed", "Read": "Read", "WebSearch": "Web search", "WebFetch": "Opened",
                    "slack_search_public_and_private": "Slack search", "slack_search_public": "Slack search", "slack_read_thread": "Slack thread",
                    "slack_read_channel": "Slack channel", "search_files": "Drive search", "read_file_content": "Drive doc",
@@ -1049,7 +1113,7 @@ ARCH_TOOL_LABEL = {"Grep": "Searched", "Glob": "Listed", "Read": "Read", "WebSea
 def arch_busy(q):
     t = (q.get("turns") or [{}])[-1]
     p = parse(t.get("pending"))
-    return bool(p) and (lock_live(f"architect-{q['id']}") or lock_live(f"architect-verify-{q['id']}")
+    return bool(p) and (lock_live(f"architect-run-{q['id']}") or lock_live(f"architect-{q['id']}") or lock_live(f"architect-verify-{q['id']}")
                         or (datetime.now(ET) - p).total_seconds() < 90)
 
 
@@ -1118,7 +1182,7 @@ def arch_log(q, action, extra):
 
 def arch_post(qid, body):
     ARCH.mkdir(parents=True, exist_ok=True)
-    depth = body.get("depth") if body.get("depth") in ("quick", "exhaustive") else "quick"
+    depth = body.get("depth") if body.get("depth") in ("quick", "exhaustive") else "exhaustive"
     if qid is None:
         text = (body.get("question") or "").strip()
         if not text:
@@ -1126,7 +1190,7 @@ def arch_post(qid, body):
         words = "-".join("".join(c if c.isalnum() else " " for c in text.lower()).split()[:6])[:40] or "question"
         qid = f"{datetime.now(ET).strftime('%m%d-%H%M')}-{words}"
         q = {"id": qid, "created": now(), "context": (body.get("context") or "").strip()[:300], "status": "working", "feedback": [],
-             "turns": [{"question": text[:6000], "depth": depth, "ts": now(), "pending": now()}]}
+             "turns": [{"question": text[:6000], "depth": depth, "ts": now(), "pending": now(), "images": arch_images(body)}]}
         write_json(ARCH / f"{qid}.json", q)
         arch_log(q, "ask", {"note": text[:500], "depth": depth})
         spawn("architect.sh", qid)
@@ -1141,7 +1205,7 @@ def arch_post(qid, body):
         text = (body.get("text") or "").strip()
         if not text:
             return 400, {"error": "Ask something"}
-        q["turns"].append({"question": text[:6000], "depth": depth, "ts": now(), "pending": now()})
+        q["turns"].append({"question": text[:6000], "depth": depth, "ts": now(), "pending": now(), "images": arch_images(body)})
         q["status"] = "working"
         arch_log(q, "followup", {"note": text[:500], "depth": depth})
         spawn_after = True
@@ -1153,12 +1217,23 @@ def arch_post(qid, body):
         if not text or not answered:
             return 400, {"error": "Say what to change" if not text else "Nothing to modify yet"}
         target = body.get("turn") if isinstance(body.get("turn"), int) and body.get("turn") in answered else answered[-1]
-        q["turns"].append({"question": text[:6000], "kind": "revise", "revises": target, "depth": depth, "ts": now(), "pending": now()})
+        q["turns"].append({"question": text[:6000], "kind": "revise", "revises": target, "depth": depth, "ts": now(), "pending": now(),
+                           "images": arch_images(body)})
         q["status"] = "working"
         # The change request is also feedback on the answer, so distill can turn repeated ones into rules.
         q.setdefault("feedback", []).append({"ts": now(), "rating": None, "tags": ["Modify"], "note": text[:2000], "turn": target,
                                              "made_by": q["turns"][target].get("made_by")})
         arch_log(q, "feedback", {"rating": None, "tags": ["Modify"], "note": text[:2000]})
+        spawn_after = True
+    elif action == "retry":
+        # A run that failed (signed out, stopped, no answer) runs again for the same turn; nothing else changes.
+        t = q["turns"][-1]
+        if q["busy"] or t.get("final") or not t.get("error"):
+            return 409, {"error": "Nothing to retry"}
+        t.pop("error", None)
+        t["pending"] = now()
+        q["status"] = "working"
+        arch_log(q, "retry", {})
         spawn_after = True
     elif action == "feedback":
         rating, tags, note = body.get("rating"), [x for x in (body.get("tags") or []) if isinstance(x, str)][:8], (body.get("note") or "").strip()
@@ -1310,6 +1385,12 @@ class Handler(BaseHTTPRequestHandler):
             if len(parts) == 5 and all(p and "." not in p and "/" not in p for p in parts[3:]):
                 return self.send(200, talk_view(parts[3], parts[4]))
             return self.send(404, {"error": "not found"})
+        if path.startswith("/api/architect-image/"):
+            name = path.rsplit("/", 1)[-1]
+            f = ARCH_IMG / name
+            if IMG_NAME.match(name) and f.is_file():
+                return self.send(200, f.read_bytes(), {"png": "image/png", "jpg": "image/jpeg", "gif": "image/gif", "webp": "image/webp"}[name.rsplit(".", 1)[1]])
+            return self.send(404, {"error": "not found"})
         if path.startswith("/api/report/"):
             parts = path.split("/")
             if len(parts) == 5 and all(p and "." not in p for p in parts[3:]):
@@ -1344,7 +1425,8 @@ class Handler(BaseHTTPRequestHandler):
         origin = self.headers.get("Origin")
         ctype = (self.headers.get("Content-Type") or "").split(";")[0].strip().lower()
         return (self.host_ok() and (origin is None or origin in ORIGINS) and ctype == "application/json"
-                and self.token_ok() and 0 <= int(self.headers.get("Content-Length") or 0) <= MAX_BODY)
+                and self.token_ok()
+                and 0 <= int(self.headers.get("Content-Length") or 0) <= (IMG_MAX * 4 // 3 + 1000 if self.path.split("?")[0] == "/api/architect-image" else MAX_BODY))
 
     def fail(self, e):
         with (ROOT / "logs" / "app-errors.log").open("a") as fh:
@@ -1369,8 +1451,8 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             return self.fail(e)
 
-    def body(self, default):
-        raw = self.rfile.read(max(0, min(int(self.headers.get("Content-Length", 0)), MAX_BODY)))
+    def body(self, default, cap=MAX_BODY):
+        raw = self.rfile.read(max(0, min(int(self.headers.get("Content-Length", 0)), cap)))
         data = json.loads(raw or json.dumps(default))
         if not isinstance(data, type(default)):
             raise ValueError("body must be a JSON " + type(default).__name__)
@@ -1386,6 +1468,9 @@ class Handler(BaseHTTPRequestHandler):
                     if isinstance(ev, dict) and isinstance(ev.get("e"), str):
                         f.write(json.dumps({k: ev[k] for k in list(ev)[:12]}, ensure_ascii=False)[:2000] + "\n")
             return self.send(200, {"ok": True})
+        if parts == ["api", "architect-image"]:
+            code, payload = arch_image_save(self.body({}, IMG_MAX * 4 // 3 + 1000))
+            return self.send(code, payload)
         if parts[:2] == ["api", "architect"] and len(parts) in (2, 3):
             code, payload = arch_post(parts[2] if len(parts) == 3 else None, self.body({}))
             return self.send(code, payload)
@@ -1406,6 +1491,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, {"started": False, "reason": "already running"})
             spawn("run-lead.sh", area)
             return self.send(200, {"started": True})
+        if parts == ["api", "items"]:
+            code, payload = new_todo(self.body({}))
+            return self.send(code, payload)
         if len(parts) == 4 and parts[:2] == ["api", "items"] and parts[3] == "action":
             body = self.body({})
             code, payload = act(parts[2], body)
@@ -1420,7 +1508,7 @@ if __name__ == "__main__":
     # Another brain (or anything else) may hold the port: take the next free one, so a second copy, such as a sandbox
     # for trying /onboard, runs beside the first. state/app.port records where this one is.
     server = None
-    for port in ([PORT] if len(sys.argv) > 1 else range(PORT, PORT + 20)):
+    for port in ([PORT] if len(sys.argv) > 1 and sys.argv[1].isdigit() else range(PORT, PORT + 20)):
         try:
             server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
             break

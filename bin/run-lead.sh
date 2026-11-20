@@ -50,7 +50,8 @@ source "$ROOT/bin/_lead_tools.zsh"
 LIVE=($(/opt/homebrew/bin/python3 -I -c 'import json,sys,glob; [print(f) for f in glob.glob(sys.argv[1]+"/queue/items/*.json") if json.load(open(f)).get("area")==sys.argv[2] and json.load(open(f)).get("status") in ("open","waiting","working","reconciling","snoozed")]' "$ROOT" "$AREA"))
 (( ${#LIVE} )) && /opt/homebrew/bin/python3 -I "$ROOT/bin/knowledge.py" "${LIVE[@]}" >> "$TMP" || true
 [[ "$MODE" == "sync" ]] && printf '\n## Items to check this run\nOnly these (the others were checked recently and were quiet): %s\n' "${(j:, :)DUE}" >> "$TMP"
-/opt/homebrew/bin/python3 -I "$ROOT/bin/connectors.py" sources "$AREA" "$MODE" >> "$TMP"   # watch list with per-connector windows, plus lookups (config/connectors.json)
+/opt/homebrew/bin/python3 -I "$ROOT/bin/connectors.py" sources "$AREA" "$MODE" >> "$TMP"
+/opt/homebrew/bin/python3 -I "$ROOT/bin/saved_items.py" "$AREA" "$MODE" >> "$TMP"   # Slack Saved for later -> to-dos (default area only)   # watch list with per-connector windows, plus lookups (config/connectors.json)
 # Local sources of truth the lead may read (config/brain.json source_dirs, set during onboarding).
 SOURCE_DIRS=$(/opt/homebrew/bin/python3 -I -c 'import json,os,sys; c=json.load(open(sys.argv[1])); print(" ".join(os.path.expanduser(d) for d in c.get("source_dirs") or []) or sys.argv[2])' "$ROOT/config/brain.json" "$ROOT")
 exec "$ROOT/bin/_claude.sh" "$MODE-$AREA" "$TMP" \

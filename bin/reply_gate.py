@@ -25,6 +25,9 @@ LIVE = {"open", "waiting", "working"}
 PENDING = {"todo", "failed"}
 
 
+OWNER_CHOSE = ("slack-saved:", "own:")
+
+
 def verdict(ask):
     if not isinstance(ask, dict):
         return None
@@ -45,6 +48,8 @@ def sweep(area=None, dry=False):
         except (OSError, json.JSONDecodeError):
             continue
         if it.get("status") not in LIVE or (area and it.get("area") != area):
+            continue
+        if (it.get("key") or "").startswith(OWNER_CHOSE):   # the owner made it theirs: saved in Slack, or added it
             continue
         cur = next((s for s in it.get("steps") or [] if s.get("status", "todo") in PENDING), None)
         if not cur or not is_owner(cur.get("owner")) or (cur.get("execute") or {}).get("kind") not in ("slack_send", "slack_draft"):

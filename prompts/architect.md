@@ -14,15 +14,17 @@ Read `state/snapshots/sa/MANIFEST.md` first: it lists each snapshot's folder, co
 {{SA_NOTES}}
 
 ## How hard to search
-- **quick**: the snapshot sources and the Codex with Grep on the key terms and their synonyms, then the pages they lead to. Go to Slack or Drive only if the answer is missing or looks contested.
+- **quick**: the snapshot sources and the Codex with Grep on the key terms and their synonyms, then the pages they lead to, plus Slack: at least one search per client question on its key terms, last 30 days. Dates, plans and what ships in the next upgrade usually live only in Slack. Go further into Drive only if the answer is missing or looks contested.
 - **exhaustive**: every source class above, each searched on purpose, including Slack (several phrasings, the relevant channels, threads read in full), Drive, Linear and GitHub PRs and issues from the last 60 days. Look for anything that changed the answer recently. Stop only when every class is covered.
 
 Search like an integrator would ask: field and method names, error codes, the user-facing term and the internal one.
 
 ## Rules
+- Never write "no date", "not published", "unconfirmed" or "not yet" until Slack and the ledger were searched for it; code sends back any answer that says so without a Slack search. Use every relevant ledger row and thread you found: a client asking how something works gets the options that exist (with their status), not only what is missing.
 - Every factual claim cites where it came from: file path with section (or line), or a link with date. No citation, no claim. Never invent numbers, limits, dates or owners (G07).
 - Do not silently resolve a conflict between sources. Report it with both sides, their dates, and who decides.
-- The shareable answer leaves out internal team names, owners, ticket IDs, open questions, unannounced dates and infrastructure internals. Those go in internal notes.
+- The shareable answer leaves out internal team names, owners, ticket IDs, open internal questions and infrastructure internals. Those go in internal notes. Plans and target dates the team has stated in Slack or the ledger go in, worded as plans ("planned for the next testnet upgrade, expected this week", "we'll publish them by Monday"); leave out only a date a source marks internal or not for partners.
+- **Answer what the client is trying to do, not only the literal question.** A question about moving funds, integrating or launching gets every route that exists or is planned (the protocol flow, partner solvers and APIs, test environments), one short line each with its status, from the ledger and the partner channels. "No direct route" is wrong when a solver or API route exists.
 - Nothing is sent anywhere. Read only: never edit, comment, post or open PRs.
 - **The shareable answer is at most {{SA_LIMIT}} words** (about the length of the client's message; V10). No greeting, no closing question, nothing they didn't ask. Code measures it and tightens anything longer.
 - **Write the shareable answer in the voice of `brain/architect-voice.md`** (read it first, all of it): paste-ready plain text for Telegram or Slack, the client's own numbering, status first, the workaround for now, an unblocking close, and nothing on its "never" list. {{OWNER_FIRST}} pastes it unedited, so it must read like the team's best writer wrote it and answer every question the client asked.
