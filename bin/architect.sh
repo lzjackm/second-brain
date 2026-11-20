@@ -30,11 +30,38 @@ A="$ROOT/state/prompt-architect-$ID.md"; V="$ROOT/state/prompt-architect-verify-
 if [[ -n "${ARCH_ALOG:-}" && -f "$ARCH_ALOG" ]]; then
   ALOG="$ARCH_ALOG"   # resume: check and apply an answer that already ran (ARCH_ALOG=<its log>)
 else
+  # Thorough answers: code searches the snapshots, then two lanes research in parallel, each with only its own brief
+  # (docs: snapshots, repos, GitHub; live: Slack, Drive, the tracker), and the writer below works from their findings.
+  DEPTH=$($PY -I -c 'import json,sys; t=json.load(open(sys.argv[1]))["turns"][-1]; print("" if t.get("kind")=="revise" else t.get("depth",""))' "$ROOT/architect/$ID.json")
+  if [[ "$DEPTH" == "exhaustive" ]]; then
+    DIG="$ROOT/state/sa-digest-$ID.md"
+    $PY -I "$ROOT/bin/sa_search.py" "$ID" "$DIG" || : > "$DIG"
+    LANES=(${(f)"$($PY -I "$ROOT/bin/architect.py" lanes "$ID")"})   # "docs", then "live" or "live1 1,2,3" and "live2 4,5"
+    rm -f "$ROOT"/state/sa-lane-*-$ID.json(N)   # (N): no match is fine (zsh aborts the script otherwise, Nov 20)
+    for SPEC in "${LANES[@]}"; do
+      L=${SPEC%% *}; QS=${SPEC#* }; [[ "$QS" == "$L" ]] && QS=""
+      $PY -I "$ROOT/bin/architect.py" lane-prompt "$ID" "$L" "$ROOT/state/prompt-architect-lane-$L-$ID.md" "$DIG" "$QS"
+      if [[ "$L" == docs* ]]; then
+        ( JB_NO_CONNECTORS=1 "$ROOT/bin/_claude.sh" "architect-lane-$L-$ID" "$ROOT/state/prompt-architect-lane-$L-$ID.md" --add-dir "${DIRS[@]}" --allowedTools "${READ[@]}" --disallowedTools "${DENY[@]}" || true
+          $PY -I "$ROOT/bin/architect.py" lane-save "$ID" "$L" "$(ls -t "$ROOT"/logs/architect-lane-$L-$ID-*.log 2>/dev/null | head -1)" ) &
+      else
+        ( "$ROOT/bin/_claude.sh" "architect-lane-$L-$ID" "$ROOT/state/prompt-architect-lane-$L-$ID.md" --allowedTools "${READ[@]}" --disallowedTools "${DENY[@]}" || true
+          $PY -I "$ROOT/bin/architect.py" lane-save "$ID" "$L" "$(ls -t "$ROOT"/logs/architect-lane-$L-$ID-*.log 2>/dev/null | head -1)" ) &
+      fi
+    done
+    wait
+  fi
   $PY -I "$ROOT/bin/architect.py" prompt "$ID" "$A"
   S=$(date +%s)
-  "$ROOT/bin/_claude.sh" "architect-$ID" "$A" --add-dir "${DIRS[@]}" "$HOME/.claude/projects/${HOME//[\/.]/-}/memory" --allowedTools "${READ[@]}" --disallowedTools "${DENY[@]}" || true
+  if [[ "$DEPTH" == "exhaustive" ]]; then
+    # The lanes did the research: the writer only reads (the voice file, the findings) and writes, about a minute.
+    JB_NO_CONNECTORS=1 "$ROOT/bin/_claude.sh" "architect-$ID" "$A" --tools Read --strict-mcp-config --allowedTools Read || true
+  else
+    "$ROOT/bin/_claude.sh" "architect-$ID" "$A" --add-dir "${DIRS[@]}" "$HOME/.claude/projects/${HOME//[\/.]/-}/memory" --allowedTools "${READ[@]}" --disallowedTools "${DENY[@]}" || true
+  fi
   ALOG=$(ls -t "$ROOT"/logs/architect-$ID-*.log 2>/dev/null | grep -v "/architect-verify-" | head -1 || true)
   (( $(stat -f %m "$ALOG" 2>/dev/null || echo 0) >= S )) || ALOG=""
+  [[ -n "$ALOG" ]] && $PY -I "$ROOT/bin/architect.py" draft "$ID" "$ALOG" || true
 fi
 VLOG=""
 if [[ -n "$ALOG" ]]; then

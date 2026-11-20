@@ -1,4 +1,4 @@
-"""Solution Architect length (V10 in code). Nov 17: a 90-word client question got a 490-word answer.
+"""Solution Architect checks in code: numbering, unchecked negatives, routes left out, no word cap.
 
 Run: bin/test.sh
 """
@@ -10,18 +10,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "bin"))
 import architect  # noqa: E402
 
 
-class Length(unittest.TestCase):
-    def q(self, n):
-        return {"turns": [{"question": " ".join(["w"] * n)}]}
-
-    def test_limit_tracks_the_question(self):
-        self.assertEqual(architect.limit(self.q(90), self.q(90)["turns"][0]), 108)
-        self.assertEqual(architect.limit(self.q(10), self.q(10)["turns"][0]), 50)     # floor
-        self.assertEqual(architect.limit(self.q(400), self.q(400)["turns"][0]), 160)  # cap
-
-    def test_revision_uses_the_original_question(self):
-        q = {"turns": [{"question": " ".join(["w"] * 90)}, {"question": "shorter please", "kind": "revise", "revises": 0}]}
-        self.assertEqual(architect.limit(q, q["turns"][1]), 108)
+class NoWordCap(unittest.TestCase):
+    # Nov 20: a word cap cut routes and dates to fit and added a 4-minute rewrite pass; brevity is a writing rule only.
+    def test_prompts_have_no_cap(self):
+        root = Path(__file__).resolve().parent.parent
+        for f in ["prompts/architect.md", "prompts/architect-verify.md", "prompts/architect-revise.md", "bin/architect.py"]:
+            text = (root / f).read_text()
+            self.assertNotIn("SA_LIMIT", text, f)
+            self.assertNotRegex(text, r"at most \{?\{?\w*\}?\}? words", f)
 
 
 if __name__ == "__main__":
@@ -94,5 +90,87 @@ class Checks(unittest.TestCase):
         finally:
             self.Q["turns"][0]["answer"]["searched"].pop()
 
-    def test_five_questions_get_more_room(self):
-        self.assertEqual(architect.limit(self.Q, self.Q["turns"][0]), 275)
+
+
+class Routes(unittest.TestCase):
+    # Nov 20: the research found three solver and API routes; the answer said there was no direct route.
+    def test_routes_found_must_be_named(self):
+        import json
+        q = {"id": "test-routes-x"}
+        f = architect.lane_file(q["id"], "live")
+        f.write_text(json.dumps({"routes": [{"q": "4", "route": "Relay solver payout from the hub", "status": "planned (Nov 25)"},
+                                            {"q": "4", "route": "Old Bridge", "status": "not planned"}]}))
+        try:
+            self.assertTrue(architect.missing_routes(q, "4. Withdrawals: no direct route at launch."))
+            self.assertEqual(architect.missing_routes(q, "4. Withdrawals: through the hub, then a Relay solver from Nov 25."), [])
+        finally:
+            f.unlink()
+
+
+class CodeConfirmed(unittest.TestCase):
+    # Nov 20: code checks quotes from local files so verify only checks the rest; a made-up quote must not pass.
+    def test_real_quote_passes_fake_fails(self):
+        import tempfile
+        f = Path(tempfile.mkdtemp()) / "spec.md"
+        f.write_text("A `MARKET` order is turned into a limit at the aggressive edge of that band.\nNo retry.")
+        real = {"id": "C1", "sources": [{"ref": f"{f}#collar", "quote": "a MARKET order is turned into a limit ... aggressive edge of that band"}]}
+        fake = {"id": "C2", "sources": [{"ref": f"{f}#collar", "quote": "every fired exit is retried three times"}]}
+        link = {"id": "C3", "sources": [{"ref": "https://example.com/x", "quote": "No retry."}]}
+        self.assertEqual(architect.code_confirmed([real, fake, link]), ["C1"])
+
+
+class FindingIds(unittest.TestCase):
+    # Nov 20: the writer cites findings by id and code copies their sources in, instead of the writer copying quotes.
+    def test_claims_get_sources_from_findings(self):
+        import json
+        i = "test-findings-x"
+        f = architect.lane_file(i, "docs")
+        f.write_text(json.dumps({"findings": [{"id": "d1", "fact": "x", "source": {"ref": "a.md:3", "quote": "No retry."}}],
+                                 "searched": ["ADRs: grep retry"]}))
+        try:
+            ans = architect.expand(i, {"claims": [{"id": "C1", "text": "No retry", "findings": ["d1", "zz"]}]})
+            self.assertEqual(ans["claims"][0]["sources"], [{"ref": "a.md:3", "quote": "No retry."}])
+            self.assertEqual(ans["searched"], ["ADRs: grep retry"])
+        finally:
+            f.unlink()
+
+
+class SourceOrder(unittest.TestCase):
+    # Nov 20: code, ADRs, specs and published docs are the source of truth; Slack, Drive and ledgers are secondary.
+    def test_every_step_ranks_code_and_docs_first(self):
+        root = Path(__file__).resolve().parent.parent
+        for f in ["prompts/architect.md", "prompts/architect-lane.md", "prompts/architect-verify.md"]:
+            self.assertRegex((root / f).read_text(), r"(?i)secondary", f)
+        self.assertIn("primary finding", (root / "bin/architect.py").read_text())
+
+
+class Sent(unittest.TestCase):
+    # Nov 20: "What I sent" stores the owner's real reply; it is logged as an edit and shown to the writer as an example.
+    def test_sent_is_logged_and_becomes_an_example(self):
+        import json
+        import tempfile
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "app"))
+        import server
+        saved = server.ARCH, server.LOG
+        server.ARCH, server.LOG = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "actions.jsonl"
+        try:
+            q = {"id": "t1", "created": "x", "status": "done", "feedback": [],
+                 "turns": [{"question": "1. Is there a retry?", "final": {"shareable_answer": "1. No retry. Long explanation."}}]}
+            (server.ARCH / "t1.json").write_text(json.dumps(q))
+            self.assertEqual(server.arch_post("t1", {"action": "sent", "text": "1. No retry."})[0], 200)
+            log = json.loads(server.LOG.read_text().splitlines()[-1])
+            self.assertEqual((log["action"], log["original_draft"], log["final_draft"], log["edited"]),
+                             ("sent", "1. No retry. Long explanation.", "1. No retry.", True))
+            self.assertEqual(server.arch_post("t1", {"action": "sent", "text": " "})[0], 400)
+        finally:
+            server.ARCH, server.LOG = saved
+        architect_root = architect.ROOT
+        try:
+            architect.ROOT = Path(tempfile.mkdtemp())
+            (architect.ROOT / "architect").mkdir()
+            (architect.ROOT / "architect" / "t1.json").write_text(json.dumps({"id": "t1", "turns": [
+                {"question": "1. Is there a retry?", "sent": {"text": "1. No retry."}}]}))
+            ex = architect.sent_examples("other")
+            self.assertIn("Owner sent:\n1. No retry.", ex)
+        finally:
+            architect.ROOT = architect_root

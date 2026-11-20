@@ -57,7 +57,7 @@ PY
 )
   if (( LANES > 0 )); then
     mkdir -p "$ROOT/state/agent-$ITEM.lock"; echo $$ > "$ROOT/state/agent-$ITEM.lock/pid"
-    CHECK_ALLOWED=("Read" "Glob" "Grep" "Write($R/agents/$ITEM/$STEP/check-*.json)" "Bash(gh pr view:*)" ${(f)"$(/opt/homebrew/bin/python3 -I "$ROOT/bin/connectors.py" tools)"})
+    CHECK_ALLOWED=("Read" "Glob" "Grep" "Write($R/agents/$ITEM/$STEP/check-*.json)" "Edit($R/agents/$ITEM/$STEP/check-*.json)" "Bash(gh pr view:*)" ${(f)"$(/opt/homebrew/bin/python3 -I "$ROOT/bin/connectors.py" tools)"})
     for i in $(seq 1 $LANES); do
       P="$ROOT/state/prompt-meeting-$ITEM-check$i.md"
       /opt/homebrew/bin/python3 -I - "$ROOT/prompts/meeting-check.md" "$ROOT/agents/$ITEM/$STEP/lane-$i.json" "$ITEM" "$STEP" "$i" "$NOW" > "$P" <<'PY'

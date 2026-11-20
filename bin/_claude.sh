@@ -172,6 +172,12 @@ try:
                 body = c.get("content")
                 calls[c["tool_use_id"]]["chars"] = len(json.dumps(body)) if not isinstance(body, str) else len(body)
     rec["tools"] = sorted(calls.values(), key=lambda x: -x.get("chars", 0))[:12]
+    rec["tool_calls"] = len(calls)   # with tool_turns: calls per turn shows whether searches are batched
+    turns = set()   # stream-json emits each tool call of one model turn as its own event: count message ids
+    for line in open(src.replace(".log.json", ".log.trace.jsonl")):
+        if '"type":"assistant"' in line and '"tool_use"' in line:
+            turns.add((json.loads(line).get("message") or {}).get("id"))
+    rec["tool_turns"] = len(turns)
 except Exception:
     pass
 # A connector run whose session never got its connectors: a search for one found no connector tool, and none was ever called.
@@ -207,6 +213,8 @@ PY
 if grep -qs "OAuth access token has expired\|Failed to authenticate" "$LOG.err" "$LOG"; then
   echo "Claude's sign-in expired. Run /login in Claude Code (or claude auth login in Terminal), then retry." > "$LOG"
   alert "Claude's sign-in expired" "Runs fail until you sign in again: /login in Claude Code."
+elif grep -qs "spend limit\|usage limit\|credit balance" "$LOG"; then   # Nov 20: the spend limit stopped a verify run
+  alert "Claude spend limit reached" "Runs fail until the limit resets or is raised (/usage-credits)."
 fi
 if [[ -f "$LOG.stalled" ]]; then
   rm -f "$LOG.stalled"

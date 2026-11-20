@@ -112,3 +112,17 @@ class RunProposedSteps(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WriteRules(unittest.TestCase):
+    # Nov 20: Claude Code checks file writes against Edit(...) rules, so a job given only Write(path) was refused every
+    # time (ledger PR bodies, distill.last_run, meeting check lanes, pipeline proposals). Every Write rule needs its Edit twin.
+    def test_every_write_rule_has_an_edit_rule(self):
+        import re
+        root = Path(__file__).resolve().parent.parent
+        for f in sorted((root / "bin").glob("*.sh")) + sorted((root / "bin").glob("*.py")):
+            text = f.read_text()
+            for path in re.findall(r"Write\(([^)]+)\)", text):
+                if path in ("...", "path") or "{" in path and "tilde" not in path and "$" not in path:
+                    continue
+                self.assertIn(f"Edit({path})", text, f"{f.name}: Write({path}) without Edit({path})")

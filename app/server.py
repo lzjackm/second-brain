@@ -1121,7 +1121,10 @@ def arch_progress(qid, since):
     """What the running turn has looked at so far, from its traces: the last steps, newest last."""
     p = parse(since)
     steps, phase = [], "Searching"
-    for name, label in ((f"architect-{qid}-", "Searching"), (f"architect-verify-{qid}-", "Checking every claim")):
+    for name, label in ((f"architect-lane-docs-{qid}-", "Searching docs and code"), (f"architect-lane-docs1-{qid}-", "Searching docs and code"),
+                        (f"architect-lane-docs2-{qid}-", "Searching docs and code"), (f"architect-lane-live-{qid}-", "Searching Slack and Drive"),
+                        (f"architect-lane-live1-{qid}-", "Searching Slack and Drive"), (f"architect-lane-live2-{qid}-", "Searching Slack and Drive"),
+                        (f"architect-{qid}-", "Writing the answer"), (f"architect-verify-{qid}-", "Checking every claim")):
         traces = [f for f in (ROOT / "logs").glob(f"{name}*.log.trace.jsonl") if p and f.stat().st_mtime >= p.timestamp() - 5]
         if not traces:
             continue
@@ -1225,6 +1228,20 @@ def arch_post(qid, body):
                                              "made_by": q["turns"][target].get("made_by")})
         arch_log(q, "feedback", {"rating": None, "tags": ["Modify"], "note": text[:2000]})
         spawn_after = True
+    elif action == "sent":
+        # What the owner actually sent the client, pasted after editing the answer (Nov 20). Logged as an edit of the
+        # architect's draft, so the daily learning run turns the differences into rules, and kept on the turn so the
+        # writer sees recent real replies as examples.
+        text = (body.get("text") or "").strip()
+        answered = [n for n, t in enumerate(q["turns"]) if t.get("final")]
+        if not text or not answered:
+            return 400, {"error": "Paste what you sent" if not text else "Nothing answered yet"}
+        t = q["turns"][answered[-1]]
+        draft = (t.get("final") or {}).get("shareable_answer", "")
+        t["sent"] = {"ts": now(), "text": text[:8000]}
+        arch_log(q, "sent", {"step_text": "client answer", "execute_kind": "architect_answer", "original_draft": draft,
+                             "final_draft": text[:8000], "edited": draft.strip() != text, "made_by": t.get("made_by")})
+        spawn_after = False
     elif action == "retry":
         # A run that failed (signed out, stopped, no answer) runs again for the same turn; nothing else changes.
         t = q["turns"][-1]
