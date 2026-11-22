@@ -330,7 +330,7 @@ def do_ledger(item, steps):
                  ["Read", "Grep", "Glob", f"Edit({tilde(wt)}/**)", f"Write({tilde(wt)}/**)", f"Edit({tilde(body)})", f"Write({tilde(body)})"])
         changed = [l[3:].strip('"') for l in git("status", "--porcelain", cwd=wt).splitlines()]
         if not changed:
-            # Nov 20: a step asked for a row the open PR already had (D337); "No rows were added" failed it on every retry.
+            # Nov 20: a step asked for a row the open PR already had; "No rows were added" failed it on every retry.
             already = dict(re.findall(r"ALREADY\s+(\S+?):\s*(\S+)", reply))
             if already and all(s["id"] in already for s in steps):
                 rows_ = ", ".join(sorted(set(v.strip("`.,") for v in already.values())))

@@ -98,11 +98,11 @@ class Routes(unittest.TestCase):
         import json
         q = {"id": "test-routes-x"}
         f = architect.lane_file(q["id"], "live")
-        f.write_text(json.dumps({"routes": [{"q": "4", "route": "Relay solver payout from the hub", "status": "planned (Nov 25)"},
+        f.write_text(json.dumps({"routes": [{"q": "4", "route": "Acme solver payout from the hub", "status": "planned (Nov 25)"},
                                             {"q": "4", "route": "Old Bridge", "status": "not planned"}]}))
         try:
             self.assertTrue(architect.missing_routes(q, "4. Withdrawals: no direct route at launch."))
-            self.assertEqual(architect.missing_routes(q, "4. Withdrawals: through the hub, then a Relay solver from Nov 25."), [])
+            self.assertEqual(architect.missing_routes(q, "4. Withdrawals: through the hub, then an Acme solver from Nov 25."), [])
         finally:
             f.unlink()
 

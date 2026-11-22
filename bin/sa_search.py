@@ -29,14 +29,14 @@ def terms(text):
     add = lambda t: t and t.lower() not in {x.lower() for x in out} and out.append(t)
     for t in re.findall(r"`([^`]{2,60})`", text):
         add(t.strip())
-    for t in re.findall(r"\b[A-Za-z]+/[A-Za-z]+\b", text):             # TP/SL
+    for t in re.findall(r"\b[A-Za-z]+/[A-Za-z]+\b", text):             # read/write
         add(t)
     for t in re.findall(r"\b[a-z]+[A-Z][A-Za-z0-9]+\b|\b\w+[._]\w+\b", text):   # camelCase, snake_case, dotted.names
         add(t)
-    for t in re.findall(r"\b[A-Z][a-z]+(?: [A-Z][a-z]+)+\b", text):    # Asset Hub
+    for t in re.findall(r"\b[A-Z][a-z]+(?: [A-Z][a-z]+)+\b", text):    # Order Book
         if not re.match(r"(?:Will|What|How|Does|Can|Our|Your|The|Also|Or|And)\b", t):
             add(t)
-    for t in re.findall(r"\b[A-Z][A-Z0-9]{1,9}\b", text):              # OFT, USDT, IOC
+    for t in re.findall(r"\b[A-Z][A-Z0-9]{1,9}\b", text):              # API, IOC
         add(t)
     special = len(out)
     words = Counter(w for w in re.findall(r"\b[a-z][a-z-]{5,}\b", text.lower()) if w not in STOP)

@@ -2,12 +2,34 @@
 
 Releases of the second-brain template. Run `/update-brain` to pull one in.
 
-## Unreleased (2026-11-20)
+## v0.5.11 (2026-11-21)
 
-Changed: app (2 files), bin (8 files), brain.example (1 files), prompts (5 files), tests (3 files).
-- (Describe the user-facing changes here before merging.)
-
-## v0.5.10 (2026-11-20)
+- **Faster, better Solution Architect answers:**
+  - Code runs the first round of searches.
+  - Four research runs then work at once: the docs and the chat apps, each split by question.
+  - A writer answers from their findings, citing each by number, and code fills in the sources.
+  - Quotes from local files are confirmed in code, so the check that follows only verifies the rest.
+  - The draft shows while it's being checked.
+  - A five-question message went from about 11 minutes to about 7.
+- **Code and docs come first.** Code, ADRs, specs and published docs are the source of truth. Chat, meeting notes and the decision log are secondary, used for plans and dates, and never override them.
+- **No word cap.** Each answer opens with its status, then gives only what the client needs to act on. Unpublished details get the date they'll be published. Routes the research found but the answer leaves out are listed for you to check.
+- **What I sent.** Paste the reply you actually sent. The learning run proposes rules from the differences, and your recent replies guide the next answers.
+- **Follow-ups keep the thread,** and a follow-up's searches see the earlier questions and answers.
+- **Fixes:**
+  - Runs could not write files they were only given `Write(...)` permission for (ledger PR descriptions, the learning run's cursor, meeting check results, pipeline proposals). Every `Write` rule now has its `Edit` twin, enforced by a test.
+  - A ledger step whose change the open PR already has now finishes as done.
+  - The learning run's input is prepared in code, and code moves its cursor.
+  - Runs that hit the spend limit send a notification.
+- **Less text on screen:**
+  - Placeholders are a word or two.
+  - Dialogs keep only what changes the decision.
+  - Hover text is a few words at most.
+  - The Solution Architect has Archive under the answer, and Escape goes back a screen.
+  - Tests keep all of these short.
+- **Starter rules P39 to P41:**
+  - Your habits alone never become rules.
+  - Code does what has one right answer.
+  - Read the source that owns a fact, not a copy of it.## v0.5.10 (2026-11-20)
 
 - **Add your own to-dos.** A + on Needs me (or N, or "New to-do" in the command palette) adds an item from a title, with an optional note, link and due date. Tick "Have the brain plan the steps" and the brain drafts the steps from your note.
 - **Slack Saved for later becomes to-dos.** With Slack connected, each message you save for later becomes a Needs me item, and clearing it in Slack closes the item. One area owns these, so there are no duplicates.

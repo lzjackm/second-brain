@@ -87,7 +87,7 @@ def main(spec, sig_path, area, out):
 
     parts = ["# Brief", f"Specialist: {spec}. Area: {area}. This brief is normally enough. If you need more, use Grep on "
              f"`state/snapshots/{area}/` (returns only matching lines) or open a linked thread, and list what you fetched "
-             "in the step's `basis.needed_more`.",
+             "in the step's `basis.read`, and anything you could not open in `basis.not_read`.",
              "## Core rules (always apply)", *rules_by_id(set(ctx.get("pinned", [])))]
     for b in job.get("brain", []):
         p = ROOT / "brain" / b

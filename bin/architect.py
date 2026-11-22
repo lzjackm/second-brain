@@ -125,8 +125,8 @@ ROUTE_SKIP = set("the a an to of via from into and or with on for at by testnet 
 
 
 def missing_routes(q, ans):
-    """Live or planned routes the research lanes found that the answer never names (Nov 20: the lanes found Relay, the
-    Value Transfer API and Eco solver routes; the answer said "no direct route")."""
+    """Live or planned routes the research lanes found that the answer never names (Nov 20: the lanes found two solver
+    routes and an API route; the answer said "no direct route")."""
     low, out = (ans or "").lower(), []
     turn = next((t for t in reversed(q.get("turns") or []) if t.get("kind") != "revise"), {})
     asked = (turn.get("question") or "").lower()   # words the client already used say nothing about which route
@@ -138,7 +138,7 @@ def missing_routes(q, ans):
         for r in routes:
             if str(r.get("status", "")).startswith("not") or r.get("q") in (None, "", "0", 0):
                 continue
-            if not re.search(r"(?i)bridg|solver|\bapi\b|transfer|route|flow|oft|withdraw|deposit|testnet|network", r.get("route", "")):
+            if not re.search(r"(?i)bridg|solver|\bapi\b|transfer|route|flow|token|withdraw|deposit|testnet|network", r.get("route", "")):
                 continue   # a tip or how-to the lane listed as a route; only ways to move funds or connect are required
             names = [w for w in re.findall(r"\b(?:[A-Z][A-Za-z0-9]+|[A-Z]{2,})\b", r.get("route", ""))
                      if w.lower() not in ROUTE_SKIP and not re.search(rf"\b{re.escape(w.lower())}\b", asked)]

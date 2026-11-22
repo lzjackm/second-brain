@@ -42,12 +42,12 @@ Built before each specialist run into `state/briefs/<run>-<specialist>.md`:
 - **Ledger slice**: every row whose ID is mentioned in a signal or related item, plus the top keyword-matching rows (up to 15), with a pointer to the full snapshot for anything else.
 - **Rule pack**: the brain files listed for that job, plus pinned core rules (P01 latest dated wins, P03 verify numbers, P21 verify corrections, G01 to G09).
 
-The prompt tells it the brief is normally enough, to use `Grep` on the full snapshot (returns only matching lines) when unsure, and to record in the step's `basis.needed_more` anything it had to fetch beyond the brief.
+The prompt tells it the brief is normally enough, to use `Grep` on the full snapshot (returns only matching lines) when unsure, and to record what it opened in `basis.read` and what it could not open in `basis.not_read`.
 
 ### 3. Measurement
 - `_claude.sh` logs per run: tokens across turns, turns, cost, model, and `units` (signals or items handled) when the caller provides them.
 - The Jobs table adds cost per unit and turns per run next to quality.
-- `basis.needed_more` counts show where briefs are too thin.
+- `basis.not_read` entries that repeat across items show where sources are out of reach; distill turns them into Fix items.
 
 ### 4. Experiment scope
 - **Universal levers (skills off, restricted tools for no-connector jobs) apply to every job, lead included**, so they don't confound lead vs pipeline.

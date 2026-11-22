@@ -680,18 +680,18 @@ function consequence(s) {
   const k = s.execute?.kind || "none", where = s.execute?.target_label || "";
   return {
     none: "",
-    slack_send: `Posts ${where ? "to " + where + " " : ""}right away.`,
-    slack_draft: "Saves a Slack draft. Nothing is sent.",
-    gdoc_create: "Creates the doc and links it here. Nothing is sent.",
-    gsheet_write: "Writes to the sheet. Nothing is sent.",
-    calendar_event: `Sends the invite${s.execute?.attendees ? " to " + [].concat(s.execute.attendees).join(", ") : ""}.`,
-    email_draft: "Saves a Gmail draft. Nothing is sent.",
-    ledger_pr: "Adds it to your open rulings PR. Nothing is merged.",
-    pr_merge: "Merges the PR.",
-    pr_comment: "Posts a comment on the PR.",
-    pr_approve: "Approves the PR on GitHub with this comment. Nothing is merged.",
-    pr_request_changes: "Posts this as a change request on the PR.",
-    brain_edit: "Adds the rule to your brain.",
+    slack_send: "Sends now",
+    slack_draft: "Draft only",
+    gdoc_create: "Creates the doc",
+    gsheet_write: "Writes the sheet",
+    calendar_event: "Sends the invite",
+    email_draft: "Draft only",
+    ledger_pr: "Not merged",
+    pr_merge: "",
+    pr_comment: "",
+    pr_approve: "Not merged",
+    pr_request_changes: "",
+    brain_edit: "",
   }[k] || "";
 }
 // Module pages show only when config/brain.json enables them (modules.meetings, modules.architect).
@@ -901,7 +901,7 @@ function currentCard(i, s, why) {
   const hasDraft = mine && kind !== "none";  // a none step is the owner doing it himself (a call, a review): no message box
   const point = mine && kind === "none" && s.draft ? s.draft.trim().replace(/^talking point:\s*/i, "") : "";
   const to = s.execute?.target_label && kind !== "none" ? `<span class="to">${esc(s.execute.target_label)}</span>${s.new_recipient ? ` <span class="chip warn">New recipient</span>` : ""}` : "";
-  const primary = mine ? `<button class="btn primary" data-step-act="do_step" ${busy ? "disabled" : ""} title="${esc(consequence(s) + (s.execute?.target ? " Goes to: " + s.execute.target : ""))}">${icon(kind === "none" ? "check" : "send")}${esc(VERB[kind] || "Done")}${to ? " to" : ""} ${to} <kbd>a</kbd></button>`
+  const primary = mine ? `<button class="btn primary" data-step-act="do_step" ${busy ? "disabled" : ""} ${consequence(s) ? `title="${esc(consequence(s))}"` : ""}>${icon(kind === "none" ? "check" : "send")}${esc(VERB[kind] || "Done")}${to ? " to" : ""} ${to} <kbd>a</kbd></button>`
     : blocked ? `<button class="btn primary" data-step-act="take_back">${icon("user")}Take it myself <kbd>t</kbd></button>` : "";
   return `<div class="card cur">
     <div class="chead">${avatar(s.owner)}<span class="k">Step ${steps(i).indexOf(s) + 1} of ${steps(i).length} · ${mine ? "Yours" : agent ? "Agent" : esc(s.owner)}</span><span class="grow"></span>${voteBtns(i, s)}${rep ? `<a href="#" data-report="${esc(rep.url.slice(8))}" style="font-size:13px">Report</a>` : ""}</div>
@@ -914,11 +914,11 @@ function currentCard(i, s, why) {
       ${mine && s.conflicts?.length ? `<ol class="conflicts">${s.conflicts.map(c => `<li><div class="ct">${esc(c.topic)}</div><div><span class="lbl">Your notes</span> ${esc(c.yours)}</div><div><span class="lbl">Meeting notes</span> ${esc(c.notes_say)}${c.notes_url ? ` <a href="${safeUrl(c.notes_url)}" target="_blank" rel="noopener">source</a>` : ""}</div>${c.affects ? `<div class="soft">Changes: ${esc(c.affects)}</div>` : ""}</li>`).join("")}</ol>` : ""}
       ${hasDraft ? `<textarea class="draft" id="draft" data-step="${esc(s.id)}" spellcheck="true" ${busy ? "disabled" : ""}>${esc(s.draft || "")}</textarea>` : ""}
       <div class="bar">${busy && !blocked ? "" : primary}${mine && kind === "none" && s.execute?.url ? `<a class="btn ghost keep" href="${safeUrl(s.execute.url)}" target="_blank" rel="noopener" title="Open ${esc(s.execute.target_label || "link")}">${icon("out")}<span class="lbl">Open ${esc(s.execute.target_label || "link")}</span></a>` : ""}
-        ${mine && !busy ? `<button class="btn ghost" data-step-act="revise_step" title="Say what's wrong and the draft is rewritten. Nothing is sent.">${icon("pen")}<span class="lbl">Revise</span> <kbd>v</kbd></button>` : ""}
-        <button class="btn ghost" data-chat-open title="Ask a question about this item: its sources, why it's yours, what to do">${icon("chat")}<span class="lbl">Ask</span> <kbd>c</kbd>${unread(i) ? '<span class="badge-dot"></span>' : ""}</button>
-        ${busy && !blocked ? "" : `<button class="btn ghost" data-step-act="agent_step" title="Hand this step to an agent: it researches, writes a report and drafts your next step. Nothing is sent.">${icon("bot")}<span class="lbl">${agent ? "Retry agent" : "Agent"}</span> <kbd>h</kbd></button>`}
+        ${mine && !busy ? `<button class="btn ghost" data-step-act="revise_step">${icon("pen")}<span class="lbl">Revise</span> <kbd>v</kbd></button>` : ""}
+        <button class="btn ghost" data-chat-open>${icon("chat")}<span class="lbl">Ask</span> <kbd>c</kbd>${unread(i) ? '<span class="badge-dot"></span>' : ""}</button>
+        ${busy && !blocked ? "" : `<button class="btn ghost" data-step-act="agent_step" >${icon("bot")}<span class="lbl">${agent ? "Retry agent" : "Agent"}</span> <kbd>h</kbd></button>`}
         <span class="grow"></span>
-        ${!mine && !agent && !busy ? `<button class="btn ghost" data-step-act="nudge" title="${esc(`Drafts a follow-up asking ${(s.owner || "them").split(" ")[0]} where this stands. Nothing is sent.`)}">${icon("send")}<span class="lbl">Nudge</span> <kbd>n</kbd></button>` : ""}
+        ${!mine && !agent && !busy ? `<button class="btn ghost" data-step-act="nudge">${icon("send")}<span class="lbl">Nudge</span> <kbd>n</kbd></button>` : ""}
         <button class="iconbtn" data-menu="step" title="More">${icon("more")}</button></div>
     </div></div>`;
 }
@@ -1074,7 +1074,7 @@ function renderDrawer() {
 /* Drawer chrome shared by Ask, Note and Agent: tabs on top, one clean composer at the bottom. */
 function drawerHead(sub, extra = "") {
   const m = state.mode;
-  return `<div class="dhd"><div class="dtabs"><button class="${m === "ask" ? "on" : ""}" data-mode="ask" title="Ask about this item (c)">Ask</button><button class="${m === "note" ? "on" : ""}" data-mode="note" title="Brief the lead (i)">Note</button><button class="${m === "talk" ? "on" : ""}" data-mode="talk" title="Talk to the agent (h)">Agent</button></div>
+  return `<div class="dhd"><div class="dtabs"><button class="${m === "ask" ? "on" : ""}" data-mode="ask" title="Ask (c)">Ask</button><button class="${m === "note" ? "on" : ""}" data-mode="note" title="Note (i)">Note</button><button class="${m === "talk" ? "on" : ""}" data-mode="talk" title="Agent (h)">Agent</button></div>
     <span class="grow"></span>${extra}<button class="iconbtn" data-chat-close title="Close (Esc)">${icon("x")}</button></div>
     <div class="dsub">${esc(sub)}</div>`;
 }
@@ -1202,7 +1202,7 @@ function jumpTo(x) { state.view = VIEW_OF[x.status] || "queue"; state.area = "al
 // Reddit-style votes on the step card: up saves at once, down asks why (the feedback dialog, preset to down).
 function voteBtns(i, s) {
   const mine = (i.feedback || []).filter(f => f.step_id === s.id && f.rating).at(-1)?.rating;
-  return `<span class="vote"><button class="vbtn ${mine === "up" ? "on" : ""}" data-vote="up" title="Good work">${icon("up")}</button><button class="vbtn ${mine === "down" ? "on bad" : ""}" data-vote="down" title="Not good: say why">${icon("down")}</button></span>`;
+  return `<span class="vote"><button class="vbtn ${mine === "up" ? "on" : ""}" data-vote="up" title="Good work">${icon("up")}</button><button class="vbtn ${mine === "down" ? "on bad" : ""}" data-vote="down" title="Not good">${icon("down")}</button></span>`;
 }
 async function vote(dir) {
   const i = current(), s = i && (curStep(i) || steps(i).at(-1)); if (!s) return;
@@ -1447,7 +1447,7 @@ function lchipsHTML(t) {
   return `<button class="chip ${L.ask ? "" : "on"}" data-lask="0">Answer</button><button class="chip ${L.ask ? "on" : ""}" data-lask="1">Ask a question</button>
     <span style="flex:1"></span>
     ${["just tell me", "harder", "easier"].map(c => `<button class="chip" data-lcmd="${c}" ${off}>${c[0].toUpperCase() + c.slice(1)}</button>`).join("")}
-    <button class="chip" data-lact="quiz" ${t.busy || !due ? "disabled" : ""} title="Spaced review of what's due">Quiz me${due ? ` · ${due}` : ""}</button>
+    <button class="chip" data-lact="quiz" ${t.busy || !due ? "disabled" : ""} title="Review">Quiz me${due ? ` · ${due}` : ""}</button>
     <button class="chip" data-lact="final" ${t.busy || !subs.length ? "disabled" : ""}>Final assessment</button>`;
 }
 function lliveHTML(t) {
@@ -1583,7 +1583,7 @@ async function renderArchHome() {
     <div class="askbox">
       <textarea id="arch-q" rows="4" placeholder="${esc(CFG.modules?.architect?.placeholder || "Client's question")}"></textarea>
       <div class="bar"><input class="text" id="arch-ctx" placeholder="Client (optional)" style="flex:1; min-width:180px">
-        <div class="seg"><button class="${A.depth === "quick" ? "on" : ""}" data-arch-depth="quick" title="ADRs, specs, docs and ledger; Slack only if needed">Quick</button><button class="${A.depth === "exhaustive" ? "on" : ""}" data-arch-depth="exhaustive" title="Every source, including Slack, Drive, Linear and recent PRs">Exhaustive</button></div>
+        <div class="seg"><button class="${A.depth === "quick" ? "on" : ""}" data-arch-depth="quick">Quick</button><button class="${A.depth === "exhaustive" ? "on" : ""}" data-arch-depth="exhaustive">Exhaustive</button></div>
         <button class="btn primary sm" data-arch-ask>${icon("search")}Find the answer</button></div>
     </div>
     ${questions.length ? `<div class="h" style="font-size:16px; margin-top:8px">Asked</div><div class="alist">${questions.map(x => `<button class="arow" data-arch="${esc(x.id)}">
@@ -1640,15 +1640,15 @@ async function renderArchQ() {
   const draft = $("arch-f")?.value || "";
   $("detail").innerHTML = `<div class="page" id="arch-page" style="max-width:900px">
     <div class="ltop"><button class="btn ghost sm" data-arch-back title="Back (Esc)">${icon("undo")}Solution Architect</button><span class="grow"></span>${q.context ? `<span class="muted">${esc(q.context)}</span>` : ""}
-      <button class="iconbtn" data-arch-fb="up" title="Good answer">${icon("up")}</button><button class="iconbtn" data-arch-fb="down" title="Not good: say why">${icon("down")}</button>
+      <button class="iconbtn" data-arch-fb="up" title="Good answer">${icon("up")}</button><button class="iconbtn" data-arch-fb="down" title="Not good">${icon("down")}</button>
 </div>
     <div id="arch-turns">${q.turns.map((t, n, all) => all[n + 1]?.auto_tighten && !all[n + 1].pending ? "" : archTurn(t, n)).join("")}</div>
     <div id="arch-live">${archLive(q)}</div>
-    ${q.busy ? "" : `<div class="bar"><button class="btn ghost sm" data-arch-archive title="Move it off the list; it stays on disk">${icon("archive")}Archive</button></div>`}
+    ${q.busy ? "" : `<div class="bar"><button class="btn ghost sm" data-arch-archive>${icon("archive")}Archive</button></div>`}
     ${(q.feedback || []).length ? `<div class="fblist">${q.feedback.map(f => `<div class="fbitem">${f.rating ? icon(f.rating) : ""}${(f.tags || []).map(g => `<span class="tag">${esc(g)}</span>`).join("")}${f.note ? `<span>${esc(f.note)}</span>` : ""}</div>`).join("")}</div>` : ""}
     <div class="askbox"><textarea id="arch-f" rows="2" placeholder="Follow-up question" ${q.busy ? "disabled" : ""}>${esc(draft)}</textarea>
       <div class="bar"><span class="grow"></span><div class="seg"><button class="${A.depth === "quick" ? "on" : ""}" data-arch-depth="quick">Quick</button><button class="${A.depth === "exhaustive" ? "on" : ""}" data-arch-depth="exhaustive">Exhaustive</button></div>
-        ${q.turns.some(t => t.final) ? `<button class="btn ghost sm" data-arch-sent ${q.busy ? "disabled" : ""} title="Paste the reply you actually sent. The brain compares it with its answer and learns from the difference.">${icon("check")}What I sent</button>` : ""}
+        ${q.turns.some(t => t.final) ? `<button class="btn ghost sm" data-arch-sent ${q.busy ? "disabled" : ""} >${icon("check")}What I sent</button>` : ""}
         <button class="btn primary sm" data-arch-follow ${q.busy ? "disabled" : ""}>${icon("send")}Ask</button></div></div>
   </div>`;
 }
@@ -1799,7 +1799,7 @@ function mtgBody(ev) {
   if (st.phase?.endsWith("_failed")) return `${people}<div class="inote bad">${esc(st.error)}</div><div style="display:flex;gap:8px"><button class="btn sm" data-mtg-retry="${esc(st.id)}">${icon("undo")}Retry</button>${item}</div>${st.agenda ? `<details class="hood"><summary>Agenda</summary>${mtgAgenda(st, false)}</details>` : ""}`;
   if (st.phase === "updates") return `${people}<div style="display:flex;gap:8px;align-items:center"><span class="tag ok">Notes read</span>${st.open_steps ? `<span>${st.open_steps} to apply</span>` : `<span class="muted">${st.steps?.length ? "Everything applied" : "Nothing to update"}</span>`}</div>
     ${(st.steps || []).map(x => mtgStep(st.id, x)).join("")}${rep("s3")}<details class="hood"><summary>Agenda</summary>${mtgAgenda(st, false)}</details>`;
-  return `${people}<div style="display:flex;gap:8px;align-items:center"><span class="grow" style="flex:1"></span>${item}<button class="btn ghost sm" data-mtg-redraft="${esc(st.id)}" title="Draft the agenda again from the latest sources; your notes stay">${icon("undo")}Redraft agenda</button><button class="btn sm" data-mtg-done="${esc(st.id)}" title="Reads the meeting notes and proposes updates to every item">${icon("check")}Meeting done: update items</button></div><details class="hood agenda" ${state.mtg.agendaOpen !== false ? "open" : ""} data-agenda-fold><summary>Agenda${state.mtg.agendas[st.id]?.rows?.length ? ` · ${state.mtg.agendas[st.id].rows.length} items` : ""}</summary>${mtgAgenda(st, true)}</details>`;
+  return `${people}<div style="display:flex;gap:8px;align-items:center"><span class="grow" style="flex:1"></span>${item}<button class="btn ghost sm" data-mtg-redraft="${esc(st.id)}">${icon("undo")}Redraft agenda</button><button class="btn sm" data-mtg-done="${esc(st.id)}">${icon("check")}Meeting done: update items</button></div><details class="hood agenda" ${state.mtg.agendaOpen !== false ? "open" : ""} data-agenda-fold><summary>Agenda${state.mtg.agendas[st.id]?.rows?.length ? ` · ${state.mtg.agendas[st.id].rows.length} items` : ""}</summary>${mtgAgenda(st, true)}</details>`;
 }
 // The agenda: one list in importance order across attendees, one short line each with its owner; click a line for
 // why it matters, the ask, the detail and the source. Notes typed during the call attach to the line (or the whole
@@ -2107,7 +2107,7 @@ function connSummary(c) {
   const st = c.stats || {};
   const bits = [ROLE[c.role][0] + (c.role === "watch" ? (c.cadence === "daily" ? " once a day" : " every run") : ""), c.areas?.length ? c.areas.join(", ") : "",
     st.items ? `${st.items} items this week` : ""].filter(Boolean);
-  return `<div class="cset">${bits.map(esc).join(" · ")}${c.suggest_lookup ? ` <span class="chip warn" data-conn-quiet="${esc(c.name)}" title="No items from it in 7 days">Quiet: switch to Lookup?</span>` : ""}</div>`;
+  return `<div class="cset">${bits.map(esc).join(" · ")}${c.suggest_lookup ? ` <span class="chip warn" data-conn-quiet="${esc(c.name)}" title="Quiet 7 days">Quiet: switch to Lookup?</span>` : ""}</div>`;
 }
 function renderSheet() {
   const C = state.conn, c = connFind(C.open), d = C.draft, areas = C.data?.areas || [];
