@@ -12,3 +12,4 @@ LEDGER_AREA=$($PY -I -c 'import sys; sys.path.insert(0, sys.argv[1]); import ide
 $PY -I "$ROOT/bin/brevity.py" "$AREA" > /dev/null || echo "brevity failed" >&2
 $PY -I "$ROOT/bin/dedupe.py" "$AREA" || true
 $PY -I "$ROOT/bin/reply_gate.py" "$AREA" || true
+$PY -I "$ROOT/bin/pr_gate.py" "$AREA" || true   # no approve or merge steps on PRs the owner opened

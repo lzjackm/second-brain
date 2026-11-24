@@ -64,6 +64,157 @@ def sa_fill(tpl):
             .replace("{{SA_CONFLICTS}}", f"   - Is the topic listed in `{cf}` as a conflict?\n" if cf else ""))
 
 
+STOP = set("the a an and or of to in on for with from at by is are be been was were it its this that these those as not no "
+           "yes we you your our their they them can will would should could may might has have had do does did than then "
+           "there here when what which who how all any each per via into over under about".split())
+
+
+def _words(t):
+    ws = (w.strip(".,;:'") for w in re.findall(r"[a-z0-9][a-z0-9.$%,'-]*", (t or "").lower()))
+    return {w for w in ws if w and w not in STOP and (len(w) > 3 or re.search(r"\d", w))}
+
+
+UNSURE = re.compile(r"\b(isn't|is not|aren't|not) (?:yet )?(?:decided|set|published|confirmed|known|in the (?:docs|specs?))|"
+                    r"\bno (?:set|fixed|published|confirmed)\b|\bundecided\b|\bnot yet\b|\bunknown\b|\bunclear\b|\bTBD\b", re.I)
+
+
+SECONDARY = re.compile(r"slack\.com|docs\.google\.com|drive\.google|#[\w-]+|\bslack\b|\bthread\b|\bDM\b|ledger|"
+                       r"DECISIONS\.md|OPEN-ITEMS|ACTIONS\.md|\bD\d{2,4}\b|\bG\d{2,3}\b|meeting notes|gemini", re.I)
+
+
+def secondary_only(c):
+    """Every source is Slack, Drive or a ledger: secondary under the owner's source order (code, ADRs, specs and the
+    published docs are primary)."""
+    srcs = c.get("sources") or []
+    return bool(srcs) and all(SECONDARY.search(f"{x.get('label', '')} {x.get('ref', '')}") for x in srcs)
+
+
+def claim_level(c):
+    """high: confirmed against code, an ADR, a spec or the published docs. medium: confirmed, but only in Slack, Drive
+    or a ledger. low: refuted, unsupported, or never checked."""
+    o = c.get("outcome")
+    if o in ("refuted", "unsupported") or o is None:
+        return "low"
+    return "medium" if secondary_only(c) else "high"
+
+
+def segments(final):
+    """The shareable answer split into sentences, each with the confidence of the claims it rests on (Nov 24: the owner
+    couldn't tell which parts of an answer were solid and which to check). Uses the writer's `spans` when given (exact
+    sentence -> claim ids); otherwise matches each claim to the sentence sharing the most numbers and distinctive words.
+    A sentence no claim backs stays unmarked unless it states a number or date, which then needs a check."""
+    ans = final.get("shareable_answer") or ""
+    claims = [c for c in final.get("claims") or [] if c.get("shareable") is not False]
+    cuts = sorted({0, len(ans), *(m.end() for m in re.finditer(r"[.!?](?=\s)|\n", ans))})
+    parts = []
+    for piece in (ans[a:b] for a, b in zip(cuts, cuts[1:]) if ans[a:b]):
+        if parts and re.fullmatch(r"\s*(?:[A-Za-z]?\d+(?:\s*(?:/|-|and)\s*[A-Za-z]?\d+)*[.)]|[•*-])", parts[-1]):
+            parts[-1] += piece             # "1.", "A4." or "3/4." starts the sentence after it, not a sentence of its own
+        else:
+            parts.append(piece)
+    if "".join(parts) != ans:            # never let the split change the text the owner copies
+        return [{"text": ans}]
+    rank = {"low": 0, "medium": 1, "high": 2}
+    hits = {i: [] for i in range(len(parts))}
+    for sp in final.get("spans") or []:
+        t = (sp.get("text") or "").strip()
+        for i, p in enumerate(parts):
+            if t and t in p or (p.strip() and p.strip() in t):
+                hits[i] += [c for c in claims if c.get("id") in (sp.get("claims") or [])]
+    if not any(hits.values()):
+        for c in claims:
+            cw = _words(c.get("text"))
+            nums = set(re.findall(r"\d[\d.,]*", c.get("text") or ""))
+            best, score = None, 0.0
+            for i, p in enumerate(parts):
+                pw = _words(p)
+                if not pw or not cw:
+                    continue
+                sc = len(cw & pw) / len(cw) + 0.5 * len(nums & set(re.findall(r"\d[\d.,]*", p)))
+                if sc > score:
+                    best, score = i, sc
+            if best is not None and score >= 0.34:
+                hits[best].append(c)
+    partly = partly_marks(final, parts)
+    out = []
+    for i, p in enumerate(parts):
+        if i in partly:
+            out.append({"text": p, "level": "low", "q": partly[i]["where"], "why": partly[i]["why"]})
+            continue
+        cs = hits[i]
+        if not p.strip():
+            out.append({"text": p}); continue
+        if cs:
+            worst = min(cs, key=lambda c: rank[claim_level(c)])
+            lv = claim_level(worst)
+            src = (worst.get("sources") or [{}])[0]
+            why = {"low": worst.get("review") or ("Not checked against a source" if worst.get("outcome") is None else "No source backs this"),
+                   "medium": "Only in " + (src.get("label") or "Slack or Drive"),
+                   "high": "Confirmed in " + (src.get("label") or "a primary source")}[lv]
+            out.append({"text": p, "level": lv, "why": why[:220], "ref": src.get("ref"), "claims": [c.get("id") for c in cs]})
+        elif final.get("spans") and re.search(r"\d|\b(will|is|are|has|planned|live|supports?)\b", p, re.I):
+            out.append({"text": p, "level": "low", "why": "The writer cited no source for this"})
+        else:
+            out.append({"text": p})
+    return out
+
+
+LABEL = re.compile(r"^\s*([A-Za-z]?\d+(?:\s*(?:/|-|and)\s*[A-Za-z]?\d+)*)\s*[.:)]")
+
+
+def partly_marks(final, parts):
+    """For each client question answered only partly (or not at all): the sentence of its block that addresses it,
+    with what is missing (Nov 24: "where's the piece it's unsure about? I want that highlighted in the text"). Uses
+    the writer's `span` and `missing` when given; otherwise finds the question's block by its label (A1, B2, 3) and the
+    sentence there that shares the most words with the matching gap and the question."""
+    gaps = final.get("gaps") or []
+    labels = {}
+    for i, p in enumerate(parts):
+        m = LABEL.match(p)
+        if m:
+            for lab in re.split(r"\s*(?:/|-|and)\s*", m.group(1)):
+                labels.setdefault(lab.lower(), i)
+    starts = sorted(set(labels.values()))
+    marks = {}
+    for q in final.get("questions") or []:
+        if q.get("answered") not in ("partly", "no"):
+            continue
+        where = str(q.get("where") or "").strip().rstrip(".:)")
+        qw = _words(q.get("q"))
+        gap = q.get("missing") or max(gaps, key=lambda g: len(_words(g) & qw), default="")
+        if gap and not q.get("missing") and len(_words(gap) & qw) < 2:
+            gap = ""
+        i0 = labels.get(where.lower())
+        block = range(i0, next((s for s in starts if s > i0), len(parts))) if i0 is not None else range(len(parts))
+        target = None
+        if q.get("span"):
+            target = next((i for i in block if q["span"].strip() and q["span"].strip() in parts[i]), None)
+        if target is None:
+            gw = _words(gap)   # the gap's words count double; a sentence that states the uncertainty is the likely one
+            scored = [(2 * len(_words(parts[i]) & gw) + len(_words(parts[i]) & qw) + (3 if UNSURE.search(parts[i]) else 0), i)
+                      for i in block if parts[i].strip()]
+            unsure = [(sc, i) for sc, i in scored if UNSURE.search(parts[i]) and _words(parts[i]) & (gw | qw)]
+            pick = max(unsure or scored, default=(0, None))   # a sentence saying what isn't settled beats word overlap
+            target = pick[1] if pick[0] else (i0 if i0 is not None else None)
+        if target is None or target in marks:
+            continue
+        what = gap or "the sources don't settle all of this question"
+        marks[target] = {"where": where, "why": f"{where + ': ' if where else ''}{'not answered' if q.get('answered') == 'no' else 'partly answered'}. "
+                                                  f"Missing: {what[0].lower() + what[1:] if what else what}"[:240]}
+    return marks
+
+
+def counts(final):
+    """What the header shows, from the same rules as the badge: claims to check (low), claims resting only on Slack,
+    Drive or the ledger (medium), and client questions only partly answered. Counted from claims, not just marked
+    sentences, so a weak claim no sentence matched is never hidden."""
+    claims = [c for c in final.get("claims") or [] if c.get("shareable") is not False]
+    lv = collections.Counter(claim_level(c) for c in claims)
+    partly = [{"where": str(q.get("where") or "").strip()[:12], "q": q.get("q", ""), "answered": q.get("answered")}
+              for q in final.get("questions") or [] if q.get("answered") in ("partly", "no")]
+    return {"low": lv["low"], "medium": lv["medium"], "partly": len(partly), "partly_list": partly[:8]}
+
+
 def confidence(final):
     """Confidence from the checker's results, not the model's self-rating (Nov 18: 10 of 14 answers said "medium" with no
     rule behind it). Returns (level, reasons): what keeps it from high, in a few words each.
@@ -88,7 +239,7 @@ def confidence(final):
         mid.append(f"{oc[None]} claim{'s' if oc[None] > 1 else ''} unchecked")
     if final.get("unconfirmed"):
         n = len(final["unconfirmed"])
-        mid.append(f"{n} claim{'s' if n > 1 else ''} only in docs or Slack")
+        mid.append(f"{n} claim{'s' if n > 1 else ''} only in Slack, Drive or the ledger")
     part = sum(1 for q in qs if q.get("answered") == "partly")
     if part:
         mid.append(f"{part} question{'s' if part > 1 else ''} partly answered")
@@ -436,7 +587,7 @@ def apply(i, alog, vlog):
              "internal_notes": ans.get("internal_notes", ""), "conflicts": ans.get("conflicts") or [],
              "gaps": ans.get("gaps") or [], "client_questions": ans.get("client_questions") or [],
              "searched": ans.get("searched") or [], "claims": ans.get("claims") or [], "questions": ans.get("questions") or [], "verified": False,
-             "changes": ans.get("changes") or [], "lesson": ans.get("lesson")}
+             "changes": ans.get("changes") or [], "lesson": ans.get("lesson"), "spans": ans.get("spans") or []}
     if ver:
         turn["verify"] = ver
         turn["verified_by"] = {"run": run_of(vlog), "job": "architect-verify"}
@@ -450,16 +601,22 @@ def apply(i, alog, vlog):
                 c["outcome"], c["review"] = v.get("outcome"), v.get("reason")
                 if v.get("outcome") == "revised" and v.get("revised_text"):
                     c["original_text"], c["text"] = c["text"], v["revised_text"]
+        if ver.get("shareable_answer") and ver["shareable_answer"] != final["shareable_answer"]:
+            final["spans"] = ver.get("spans") or []   # the reviewer rewrote it: the writer's spans no longer line up
         final["shareable_answer"] = ver.get("shareable_answer") or final["shareable_answer"]
         final["confidence"] = ver.get("confidence") or final["confidence"]
         final["conflicts"] += ver.get("new_conflicts") or []
         final["leaks"] = ver.get("leaks") or []
         final["missing_questions"] = ver.get("missing_questions") or []
+        if ver.get("questions"):
+            final["questions"] = ver["questions"]   # the reviewer's view of coverage, against the answer as it now reads
         final["voice_fixes"] = ver.get("voice_fixes") or []
         final["verified"] = True
     final["unconfirmed"] = checks.architect_claims(final["claims"])  # K10
     final["model_confidence"] = final.get("confidence")
     final["confidence"], final["confidence_why"] = confidence(final)
+    final["segments"] = segments(final)
+    final["counts"] = counts(final)
     turn["final"] = final
     q["status"] = "done"
     import prose_lint  # noqa: E402  (declauding's linter)

@@ -36,7 +36,7 @@ class Confidence(unittest.TestCase):
 
     def test_medium_reasons(self):
         lvl, why = architect.confidence(self.final(["confirmed"], unconfirmed=2))
-        self.assertEqual((lvl, why), ("medium", ["2 claims only in docs or Slack"]))
+        self.assertEqual((lvl, why), ("medium", ["2 claims only in Slack, Drive or the ledger"]))
         self.assertEqual(architect.confidence(self.final(["confirmed"], answered=("partly",)))[0], "medium")
 
     def test_low(self):
@@ -174,3 +174,38 @@ class Sent(unittest.TestCase):
             self.assertIn("Owner sent:\n1. No retry.", ex)
         finally:
             architect.ROOT = architect_root
+
+
+class Segments(unittest.TestCase):
+    # Nov 24: each sentence of an answer carries the confidence of the claims it rests on, and the text is never changed.
+    def test_levels_follow_claims_and_sources(self):
+        f = {"shareable_answer": "1. Exits: capped at the collar. Mainnet ships Nov 25.\n\n2. No retry on mainnet.",
+             "spans": [{"text": "Exits: capped at the collar.", "claims": ["C1"]}, {"text": "Mainnet ships Nov 25.", "claims": ["C2"]},
+                       {"text": "No retry on mainnet.", "claims": ["C3"]}],
+             "claims": [{"id": "C1", "outcome": "confirmed", "sources": [{"label": "Orders ADR", "ref": "adrs/trading.orders.md"}]},
+                        {"id": "C2", "outcome": "confirmed", "sources": [{"label": "Slack thread", "ref": "chat thread, Nov 20"}]},
+                        {"id": "C3", "outcome": "unsupported", "review": "No source says this", "sources": []}]}
+        seg = architect.segments(f)
+        self.assertEqual("".join(x["text"] for x in seg), f["shareable_answer"])
+        lv = {x["text"].strip(): x.get("level") for x in seg if x["text"].strip()}
+        self.assertEqual(lv["1. Exits: capped at the collar."], "high")      # list number stays with its sentence
+        self.assertEqual(lv["Mainnet ships Nov 25."], "medium")              # Slack only
+        self.assertEqual(lv["2. No retry on mainnet."], "low")
+
+    def test_published_docs_are_primary(self):
+        c = {"outcome": "confirmed", "sources": [{"label": "Product docs: orders", "ref": "docs-site/content/docs/orders.mdx"}]}
+        self.assertEqual(architect.claim_level(c), "high")
+
+
+class PartlyMarks(unittest.TestCase):
+    # Nov 24: a partly answered question highlights the sentence that leaves it open, with what is missing.
+    def test_sentence_stating_the_gap_is_marked(self):
+        f = {"shareable_answer": "A1. Fees: Amounts are in USD and count only fills on markets quoted in USD. A per-wallet read for "
+                                 "other markets isn't decided yet.\n\nA2. Timing: Paid weekly.",
+             "questions": [{"q": "How do we see a wallet's builder fee on markets quoted in other assets?", "answered": "partly", "where": "A1"},
+                           {"q": "When is it paid?", "answered": "yes", "where": "A2"}],
+             "gaps": ["A per-wallet read of builder fees on markets not quoted in USD"], "claims": []}
+        marked = [x for x in architect.segments(f) if x.get("q") is not None]
+        self.assertEqual(len(marked), 1)
+        self.assertIn("isn't decided yet", marked[0]["text"])
+        self.assertIn("Missing: a per-wallet read", marked[0]["why"])

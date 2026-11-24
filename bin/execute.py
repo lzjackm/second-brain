@@ -71,6 +71,26 @@ def placeholder(v):
     return "PLACEHOLDER"
 
 
+SAVED = re.compile(r"Output has been saved to (/[^\s\\\"]+?/tool-results/[^\s\\\"]+?\.txt)")
+
+
+def saved_result(text):
+    """A large result arrives as "Output has been saved to <file>" instead of the content (Nov 23: the memo read came
+    back as 1,706 characters of that note, so every edit looked missing). Read the file, only from this repo's own
+    session folders, where Claude Code writes them."""
+    m = SAVED.search(text or "")
+    if not m:
+        return text
+    f = Path(m.group(1))
+    home = Path.home() / ".claude" / "projects" / re.sub(r"[/.]", "-", str(ROOT))
+    try:
+        if f.resolve().is_relative_to(home.resolve()) and f.is_file():
+            return f.read_text()
+    except OSError:
+        pass
+    raise Fail("The connector's result was too large and its saved copy couldn't be read")
+
+
 def mcp_call(tool, args, label):
     """Call one connector tool with exactly `args`. Returns the tool's response text."""
     work = press.PRIVATE / "exec"
@@ -92,7 +112,7 @@ def mcp_call(tool, args, label):
         f.unlink(missing_ok=True)
     if not result.exists():
         raise Fail("The connector call failed" if called else "The connector call did not run (is the connector connected?)")
-    text = result.read_text()
+    text = saved_result(result.read_text())
     result.unlink()
     if re.search(r'"(ok)"\s*:\s*false|\\"error\\"|"error"\s*:', text):
         raise Fail("The connector returned an error: " + text[:200])
@@ -218,6 +238,77 @@ def do_gdoc(item, step):
         if link and later.get("status", "todo") in ("todo", "failed") and "{{DOC_LINK}}" in (later.get("draft") or ""):
             later["draft"] = later["draft"].replace("{{DOC_LINK}}", link)
     return "doc created", link
+
+
+EDIT_BLOCK = re.compile(r"^Replace:\s*(.+?)\nWith:\s*(.*?)(?=\n\s*\nReplace:|\Z)", re.S | re.M)
+
+
+def doc_edits(draft):
+    """`Replace: <exact text in the doc>` / `With: <new text>` pairs, one blank line apart."""
+    return [(a.strip(), b.strip()) for a, b in EDIT_BLOCK.findall(draft or "")]
+
+
+def doc_text(body):
+    """The text of a Google Docs read_doc response, however the connector wraps it: the JSON can arrive as a string inside
+    another JSON object (Nov 23: a regex on the raw text missed every sentence, so the memo edit refused to run)."""
+    out = []
+
+    def walk(o):
+        if isinstance(o, str):
+            t = o.strip()
+            if t[:1] == '"':                     # a JSON string holding JSON: unwrap once more
+                try:
+                    return walk(json.loads(t))
+                except ValueError:
+                    return None
+            if t[:1] in "{[":
+                try:
+                    walk(json.loads(t))
+                except ValueError:
+                    pass
+        elif isinstance(o, dict):
+            tr = o.get("textRun")
+            if isinstance(tr, dict) and isinstance(tr.get("content"), str):
+                out.append(tr["content"])
+            for k, v in o.items():
+                if k != "textRun":
+                    walk(v)
+        elif isinstance(o, list):
+            for v in o:
+                walk(v)
+    walk(body if not isinstance(body, str) else body)
+    return "".join(out)
+
+
+def do_gdoc_update(item, step):
+    """Edit an existing Google Doc as tracked suggestions (Nov 23: "update the memo" was a by-hand step because the
+    executor could only create docs). Every `Replace` text must be in the doc as it is now, or nothing is applied."""
+    ex = step["execute"]
+    did = ex.get("document_id") or (re.search(r"/document/d/([\w-]{20,})", ex.get("target") or "") or [None, None])[1]
+    edits = doc_edits(step.get("draft"))
+    if not did or not edits:
+        raise Fail("The doc or the Replace/With pairs are missing")
+    body = mcp_call("mcp__claude_ai_Google_Docs__read_doc", {"documentId": did}, f"{item['id']}-{step['id']}-read")
+    plain = doc_text(body)
+    norm = lambda t: re.sub(r"\s+", " ", t).strip()
+    missing = [a for a, _ in edits if norm(a) not in norm(plain)]
+    if missing:
+        raise Fail(f"Not in the doc as written now: \"{missing[0][:80]}\". Revise the step against the current doc.")
+    reqs = [{"replaceAllText": {"replaceText": b, "containsText": {"text": a, "matchCase": True}}} for a, b in edits]
+    res = mcp_call("mcp__claude_ai_Google_Docs__update_doc", {"documentId": did, "requests": reqs,
+                   "writeControl": {"writeMode": "SUGGEST" if ex.get("mode", "suggest") == "suggest" else "EDIT"}},
+                   f"{item['id']}-{step['id']}")
+    # Each replaceAllText reply says how many places it changed; a 0 means that edit didn't land, so say which.
+    # proto3 JSON leaves a 0 out, so read each reply object: no count in it means nothing changed.
+    counts = [int((re.search(r"occurrencesChanged\\*\"?\s*:\s*(\d+)", body) or [0, 0])[1])
+              for body in re.findall(r'replaceAllText\\*"?\s*:\s*\{([^{}]*)\}', res or "")]
+    missed = [edits[i][0][:60] for i, n in enumerate(counts) if n == 0 and i < len(edits)]
+    link = f"https://docs.google.com/document/d/{did}/edit"
+    if counts and len(missed) == len(edits):
+        raise Fail("The doc accepted the request but changed nothing; nothing was suggested")
+    done = len(edits) - len(missed)
+    note = f"; not applied: \"{missed[0]}\"" + (f" and {len(missed) - 1} more" if len(missed) > 1 else "") if missed else ""
+    return f"{done} change{'s' if done != 1 else ''} suggested in the doc{note}", link
 
 
 def do_gsheet(item, step):
@@ -366,7 +457,7 @@ def do_approve_fix(item, step):
 
 
 KINDS = {"slack_send": do_slack, "approve_fix": do_approve_fix, "slack_draft": do_slack, "pr_comment": do_pr, "pr_approve": do_pr,
-         "pr_request_changes": do_pr, "pr_merge": do_pr, "gdoc_create": do_gdoc, "gsheet_write": do_gsheet,
+         "pr_request_changes": do_pr, "pr_merge": do_pr, "gdoc_create": do_gdoc, "gdoc_update": do_gdoc_update, "gsheet_write": do_gsheet,
          "calendar_event": do_calendar, "brain_edit": do_brain_edit}
 
 

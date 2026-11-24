@@ -2,6 +2,30 @@
 
 Releases of the second-brain template. Run `/update-brain` to pull one in.
 
+## v0.5.12 (2026-11-24)
+
+- **Confidence by sentence in Solution Architect answers.** Each sentence is marked by how well its sources back it, and the counts sit above the answer. A question the answer only partly covers is highlighted in the text with its label (A1, B2) and what is missing. Click a count to jump to the first sentence it counts.
+- **Fixes go to the fix queue:**
+  - Fix items from the learning run and from repeated job failures, and rules you already stated, go to the Claude Code fix queue (`bin/fixes.py`). The next Claude Code session in the folder implements them without asking.
+  - UX suggestions come with an Approve fix button.
+  - You only get an item when the fix needs you: signing in again or raising the spend limit.
+- **No approve or merge items for your own PRs.** GitHub doesn't let an author approve their own PR, so `bin/pr_gate.py` retires these items at the start of every run.
+- **Scheduled runs stay in working hours** (weekdays, 9 AM to 7 PM ET) and skip a dark wake (lid closed) instead of hanging until they time out. Runs you start from the app always go.
+- **Edits to existing Google Docs.** A `gdoc_update` step applies `Replace:` / `With:` pairs as tracked suggestions. Runs can read tool results too large to return inline.
+- **More context for runs:**
+  - Today's and the next working day's meetings go into every drafting prompt (`bin/calendar_block.py`).
+  - Group chats from a Telegram Desktop export are sliced to text runs can read: set `telegram_export` in `config/brain.json`.
+- **Faster to work through the queue:**
+  - Done, Skip and Approve take effect at once, with Undo in the toast for five seconds.
+  - Lists show placeholders while loading and animate when items move.
+  - Keyboard focus is visible only when you use the keyboard.
+  - Hovering a source shows where it points.
+  - An empty queue says so.
+  - Muted text has more contrast.
+- **Fixes:**
+  - An unmatched file pattern in the Solution Architect's cleanup stopped every run.
+  - The data-source alert names your configured ledger.
+
 ## v0.5.11 (2026-11-21)
 
 - **Faster, better Solution Architect answers:**

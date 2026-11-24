@@ -126,3 +126,41 @@ class WriteRules(unittest.TestCase):
                 if path in ("...", "path") or "{" in path and "tilde" not in path and "$" not in path:
                     continue
                 self.assertIn(f"Edit({path})", text, f"{f.name}: Write({path}) without Edit({path})")
+
+
+class SavedToolResults(unittest.TestCase):
+    # Nov 23: large connector results are saved by Claude Code to <project>/<session>/tool-results/ and the run is told
+    # to read them; the guard blocked that in 88 runs. Only this repo's saved results are readable, nothing else there.
+    def test_only_this_repos_saved_results(self):
+        sys.path.insert(0, str(ROOT / "bin"))
+        import tool_guard as g
+        base = g.RESULTS + "/0b7c2a8e-1111-2222-3333-444455556666/tool-results/"
+        self.assertTrue(g.readable(base + "mcp-drive-read.txt"))
+        self.assertFalse(g.readable(base + "../../other.txt"))
+        self.assertFalse(g.readable(g.RESULTS.rsplit("/", 1)[0] + "/-Users-someone-else/0b7c2a8e-1111-2222-3333-444455556666/tool-results/x.txt"))
+        self.assertFalse(g.readable(os.path.expanduser("~/.claude/settings.json")))
+
+
+class SavedResultInExecutor(unittest.TestCase):
+    # Nov 23: the executor got "Output has been saved to <file>" instead of the doc; the hook now keeps the file's
+    # content, and only from this repo's session folders.
+    def test_hook_keeps_saved_content_from_this_repo_only(self):
+        import json
+        import shutil
+        import tempfile
+        sys.path.insert(0, str(ROOT / "bin"))
+        import tool_guard as g
+        d = Path(g.RESULTS) / "0b7c2a8e-1111-2222-3333-444455556666" / "tool-results"
+        d.mkdir(parents=True, exist_ok=True)
+        out = Path(tempfile.mkdtemp()) / "r.json"
+        try:
+            f = d / "mcp-docs-read_doc-1.txt"
+            f.write_text('{"content": "the whole doc"}')
+            os.environ.update(JB_GUARD_RESULT=str(out), JB_GUARD_EXPECT="x")
+            g.post({"tool_response": [{"type": "text", "text": f"Error: result exceeds maximum allowed tokens. Output has been saved to {f}.\nFormat: JSON"}]})
+            self.assertEqual(out.read_text(), '{"content": "the whole doc"}')
+            g.post({"tool_response": "Output has been saved to /tmp/elsewhere/tool-results/x.txt."})
+            self.assertIn("elsewhere", out.read_text())        # outside this repo's folders: passed through, not read
+        finally:
+            os.environ.pop("JB_GUARD_RESULT", None); os.environ.pop("JB_GUARD_EXPECT", None)
+            shutil.rmtree(d.parent)

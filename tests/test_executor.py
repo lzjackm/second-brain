@@ -7,6 +7,7 @@ Run: bin/test.sh
 import subprocess
 import sys
 import tempfile
+import json
 import unittest
 from pathlib import Path
 
@@ -87,3 +88,27 @@ class ApproveFix(unittest.TestCase):
             self.assertIn("Claude Code", result)
         finally:
             press.PRIVATE = saved
+
+
+class GdocUpdate(unittest.TestCase):
+    # Nov 23: "update the memo" was a by-hand step; the executor now suggests edits in an existing doc.
+    def test_pairs_applied_as_suggestions_and_refused_when_text_moved(self):
+        import execute
+        doc = '{"body": {"content": [{"paragraph": {"elements": [{"textRun": {"content": "Vendor A: $1.25M loan\\\\n"}}]}}]}}'
+        calls = []
+        saved = execute.mcp_call
+        wrapped = json.dumps(json.dumps({"content": [{"type": "text", "text": doc}]}))   # as the connector can wrap it
+        execute.mcp_call = lambda tool, args, label: calls.append((tool, args)) or (wrapped if tool.endswith("read_doc") else "ok")
+        try:
+            step = {"id": "s4", "execute": {"kind": "gdoc_update", "target": "https://docs.google.com/document/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcdef/edit"},
+                    "draft": "Replace: Vendor A: $1.25M loan\nWith: Vendor B: $1.25M loan"}
+            res, link = execute.do_gdoc_update({"id": "x"}, step)
+            self.assertIn("1 change suggested", res)
+            req = calls[-1][1]
+            self.assertEqual(req["writeControl"]["writeMode"], "SUGGEST")
+            self.assertEqual(req["requests"][0]["replaceAllText"]["replaceText"], "Vendor B: $1.25M loan")
+            step["draft"] = "Replace: Vendor C: $9M loan\nWith: Vendor C: $1.5M loan"
+            with self.assertRaises(execute.Fail):
+                execute.do_gdoc_update({"id": "x"}, step)
+        finally:
+            execute.mcp_call = saved

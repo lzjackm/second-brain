@@ -15,7 +15,7 @@ Read `docs/design.md` (the current design system: follow it, and propose changes
 - Never edit the app or anything else. Only write the one queue item below.
 
 ## Output
-If there is anything worth changing, write `queue/items/brain-ux-{{DATE}}.json` per `queue/SCHEMA.md`: area `brain`, type `review`, priority 25, title "UX review: N suggestions", `context` one line on the week's usage, and one {{OWNER_FIRST}} step per suggestion (text under 12 words starting with a verb; `draft` = the change, the evidence and the expected effect in 2 to 3 lines; `execute` `{"kind": "none"}`). {{OWNER_FIRST}} approves a step to have it built in a session; skipping it is a no.
+If there is anything worth changing, write `queue/items/brain-ux-{{DATE}}.json` per `queue/SCHEMA.md`: area `brain`, type `review`, priority 25, title "UX review: N suggestions", `context` one line on the week's usage, and one {{OWNER_FIRST}} step per suggestion (text under 12 words starting with a verb; `draft` = the change and its evidence in at most two plain lines; `spec` = what to change in the app, for Claude Code; `execute` `{"kind": "approve_fix"}`). Approve fix queues it to be built; skipping it is a no.
 
 End with one line: `suggestions N`.
 

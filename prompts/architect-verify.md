@@ -40,5 +40,7 @@ End with one fenced block of valid JSON:
  "new_conflicts": [{"topic": "...", "sides": ["..."], "decider": "..."}],
  "leaks": ["anything internal in the shareable answer"],
  "shareable_answer": "the final client-ready answer (rewritten if needed)",
+ "spans": [{"text": "one sentence of the shareable answer, copied exactly", "claims": ["C1", "C3"]}],
+ "questions": [{"q": "each client question", "answered": "yes | partly | no", "where": "its label, e.g. A1", "span": "for partly or no: the exact sentence that addresses it, or null", "missing": "for partly or no: what is not settled"}],
  "confidence": "high | medium | low"}
 ```

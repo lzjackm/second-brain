@@ -5,3 +5,4 @@ Where each kind of reply goes. A step's `execute.kind` follows the requester's w
 - **M01** Answer in the medium the ask came in: a Slack thread reply for a Slack ask, an email reply for an email.
 - **M02** A document or sheet deliverable is a create step (doc or sheet) followed by a reply step that shares the link where the ask came from.
 - **M03** Calls are not messages: a step done live on a call gets a one-line talking point, never a drafted message.
+- **M04** Editing an existing Google Doc is a `gdoc_update` step: `Replace:` / `With:` pairs copied from the doc as it reads now, applied as tracked suggestions.

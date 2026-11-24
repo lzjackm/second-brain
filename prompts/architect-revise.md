@@ -24,8 +24,8 @@ You are {{OWNER}}'s Solutions Architect. You drafted an answer to a client; {{OW
 ## Output
 End with one fenced block of valid JSON, the same shape as before plus two fields:
 ```json
-{"shareable_answer": "...", "internal_notes": "...", "confidence": "high | medium | low",
- "questions": [{"q": "...", "answered": "yes | partly | no", "where": "..."}],
+{"shareable_answer": "...", "spans": [{"text": "one sentence of the shareable answer, copied exactly", "claims": ["C1", "C3"]}], "internal_notes": "...", "confidence": "high | medium | low",
+ "questions": [{"q": "...", "answered": "yes | partly | no", "where": "its label, e.g. A1", "span": "for partly or no: the exact sentence that addresses it, or null", "missing": "for partly or no: what is not settled"}],
  "claims": [{"id": "C1", "text": "...", "shareable": true, "sources": [{"label": "...", "ref": "...", "date": "...", "quote": "..."}]}],
  "conflicts": [], "gaps": [], "client_questions": [], "searched": ["..."],
  "changes": ["what you changed, a few words each"],

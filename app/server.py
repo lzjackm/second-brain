@@ -148,6 +148,37 @@ def safe_checks(item):
         return [{"code": "K0", "level": "warn", "msg": f"Checks failed on this item ({type(e).__name__}: {e})"[:200]}]
 
 
+MEMORY_DIR = Path.home() / ".claude" / "projects" / str(Path.home()).replace("/", "-").replace(".", "-") / "memory"
+AUTO_FIX_JOBS = {"distill", "ops_report"}
+
+
+def route_to_fixes(item, s):
+    """The brain's own fixes skip the owner (Nov 23, "same deal again"): a learning-run Fix step, or a rule the owner
+    already stated (its evidence is one of their saved feedback memories), goes to the Claude Code fix queue
+    (bin/fixes.py) and is closed here. Rules inferred from patterns still come to the owner: that is a judgment call."""
+    made = item.get("made_by") if isinstance(item.get("made_by"), dict) else {}   # older items store a string
+    if made.get("job") not in AUTO_FIX_JOBS or item.get("status") not in ("open", "working") \
+            or not is_owner(s.get("owner")) or s.get("status", "todo") not in PENDING:
+        return False
+    kind = (s.get("execute") or {}).get("kind")
+    stated = kind == "brain_edit" and any(
+        re.search(r"feedback_[\w-]+\.md", str(e.get("label", "")) + str(e.get("url", ""))) and
+        (MEMORY_DIR / re.search(r"feedback_[\w-]+\.md", str(e.get("label", "")) + str(e.get("url", ""))).group(0)).exists()
+        for e in item.get("evidence") or [])
+    if kind != "approve_fix" and not stated:
+        return False
+    import fixes  # noqa: E402  (bin/)
+    target = (s.get("execute") or {}).get("target", "")
+    spec = s.get("spec") or s.get("draft") or s.get("text")
+    if stated:
+        spec = f"Add this rule to {target or 'the right brain file'} (the owner stated it; evidence: " \
+               f"{', '.join(str(e.get('label')) for e in item.get('evidence') or [])}):\n{s.get('draft')}"
+    fixes.queue(item.get("title", ""), spec, f"item:{item['id']}:{s.get('id')}", made.get("job"), item=item["id"])
+    s.update(status="done", done_at=now(), done_by="brain", result="Queued for Claude Code; no approval needed")
+    item.setdefault("history", []).append({"ts": now(), "by": "app", "event": "routed to the Claude Code fix queue", "step": s.get("id")})
+    return True
+
+
 def load_items():
     items = []
     current = datetime.now(ET)
@@ -166,6 +197,16 @@ def load_items():
             o = (s.get("owner") or "").strip()
             if o and o != OWNER and is_owner(o):
                 s["owner"] = OWNER
+                changed = True
+            # A suggested change to the brain itself (a UX or Fix review) is approved, not marked done: a "Mark done" step
+            # there changed nothing (Nov 21: three UX suggestions marked done were never built).
+            if (routed := route_to_fixes(item, s)):
+                changed = True
+                continue
+            if item.get("area") == "brain" and item.get("type") == "review" and is_owner(s.get("owner")) \
+                    and (s.get("execute") or {}).get("kind", "none") == "none" and s.get("status", "todo") in PENDING:
+                s["execute"] = {"kind": "approve_fix"}
+                s.setdefault("spec", s.get("draft") or s.get("text"))
                 changed = True
         had_steps = bool(item.get("steps"))
         status = compute_status(item)
@@ -361,7 +402,7 @@ def connectors_post(action, body):
 
 # Children get a PATH that finds Homebrew and Claude Code (as bin/_env.zsh sets): the app runs under launchd, whose bare
 # PATH hid gh and stopped the meeting agent and PR steps before they started (Nov 16, Nov 17).
-CHILD_ENV = {**os.environ, "PATH": ":".join([str(Path.home() / ".local/bin"), str(Path.home() / ".claude/local"),
+CHILD_ENV = {**os.environ, "JB_MANUAL": "1", "PATH": ":".join([str(Path.home() / ".local/bin"), str(Path.home() / ".claude/local"),
                                              "/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin"])}
 
 
@@ -1157,6 +1198,14 @@ def arch_get(qid):
         t.pop("pending", None)
         t["error"] = t.get("error") or "The run stopped without an answer. Ask again to retry."
         write_json(path, {k: v for k, v in q.items() if k != "busy"})
+    import architect  # noqa: E402  (bin/)
+    import checks  # noqa: E402
+    for turn in q["turns"]:   # recomputed on read, so older answers follow the current rules (badge, marks, counts)
+        f = turn.get("final")
+        if f:
+            f["unconfirmed"] = checks.architect_claims(f.get("claims"))
+            f["confidence"], f["confidence_why"] = architect.confidence(f)
+            f["segments"], f["counts"] = architect.segments(f), architect.counts(f)
     if q["busy"]:
         q["progress"] = arch_progress(qid, t.get("pending"))
     return q

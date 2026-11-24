@@ -18,8 +18,12 @@ Checks
 - K7 placeholder (warn): a send-ready draft still has a blank or placeholder ([names], <link>).
 - K8 locked_on_target (warn): a Locked ledger row whose own text is a target, proposal or hedge.
 - K9 channel_ask (warn): why_owner rests on a channel ask or on owning the area, with no direct ask to the owner.
-- K10 docs_only_claim (warn, architect): a shareable claim about the product sourced only from public docs or Slack,
-  with no ADR, spec or code (`architect_claims`).
+- K10 docs_only_claim (warn, architect): a shareable claim about the product sourced only from Slack, Drive or the
+  ledger, with no published doc, ADR, spec or code (`architect_claims`). A source the checker itself discounted ("only a schema example",
+  "adds nothing") doesn't count as primary.
+- K15 unconfirmed_as_set (warn): a send or ledger draft states as settled what its basis says is unconfirmed.
+- K16 superseded_status (warn): a draft relays a status (live, confirmed, went through) that a later message in the same
+  thread, already in its evidence, reverses.
 """
 import json
 import re
@@ -58,13 +62,21 @@ def register_problems(text):
 
 
 ASK_SINCE = "2026-11-16T17:00"  # reply steps record their ask from here on (K12)
+ASK_BLOCK_SINCE = "2026-11-22"   # from here, a decide or approve_send reply with no ask blocks (K12)
 WHY_OWNER_SINCE = "2026-11-11"  # items created before the why_owner rule existed are not flagged
 LOCKED = re.compile(r"\|\s*(Locked|Decided|Final)\s*\|", re.I)
 SEND_KINDS = {"slack_send", "slack_draft", "email_draft", "pr_comment", "pr_approve", "pr_request_changes"}
 # [text] that is not a markdown link, or <word> that is not a Slack token (<@U..>, <#C..>, <!here>, <https://..|x>)
 PLACEHOLDER = re.compile(r"\[[^\]\n]{2,80}\](?!\()|<(?![@#!/]|https?:|mailto:)[A-Za-z][A-Za-z .'\-]{1,40}>")
 HEDGE = re.compile(r"\b(target(s|ed)?|aim(s|ing)? to|goal|propos(ed|al|es)|tentative(ly)?|not (a )?confirmed|unconfirmed|expected to|plan(s|ning)? to|TBD|likely|should get)\b", re.I)
-CHANNEL_ASK = re.compile(r"\b(asked the (channel|team|group)|in #[\w-]+|channel|product owner|owner of|you own|ledger lists you)\b", re.I)
+CHANNEL_ASK = re.compile(r"\b(asked the (channel|team|group)|in #[\w-]+|channel|product owner|owner of|you own|ledger lists you"
+                         r"|(you|" + re.escape(identity.OWNER_FIRST.lower()) + r")( and \w+)? (own|co-own|share)s?|in the ledger|ledger (row|lists|names))\b", re.I)
+UNCONFIRMED = re.compile(r"not replied|not confirmed|unconfirmed|no reply|hasn't confirmed|not yet agreed", re.I)
+HEDGED_DRAFT = re.compile(r"waiting|pending|floated|to confirm|not confirmed|proposed|tentative|if .* agrees|\?", re.I)
+STATUS_MET = re.compile(r"\b(went through|(?:is|are|it's|we're|now) live|confirmed|good for|go ahead|shipped|launched|done)\b", re.I)
+REVERSAL = re.compile(r"re-?genesis|redeploy|regroup|roll ?back|revert|\bhold\b|delay|postpone|not yet|blocked|paused|reverted", re.I)
+DISCOUNTED = re.compile(r"adds nothing|only an? .{0,40}example|schema example|not evidence|doesn't support|does not support", re.I)
+SLACK_TS = re.compile(r"archives/([A-Z0-9]+)/p(\d+)(?:.*?thread_ts=([\d.]+))?")
 DIRECT_ASK = re.compile(r"\b(asked you|tagged you|DM(ed)? you|your DM|to you|you said|you told|you agreed|you offered|handed (this|it) to you|named you|mentioned you)\b", re.I)
 _SA = (identity.CFG.get("modules") or {}).get("architect") or {}
 # Primary sources: decision records, specs, code, and any Solution Architect snapshot marked primary; weak: public
@@ -72,7 +84,9 @@ _SA = (identity.CFG.get("modules") or {}).get("architect") or {}
 _P = "|".join(re.escape(d) + "/(?!docs)" for d in _SA.get("primary") or [])
 _D = "|".join(re.escape(d) for d in _SA.get("derived") or [])
 PRIMARY = re.compile(r"(adrs?/|\bADR\b|spec|\.(rs|ts|tsx|js|go|py|java|kt|swift|c|cpp|sol|move)\b|/src/" + (f"|{_P}" if _P else "") + ")", re.I)
-WEAK = re.compile(r"(docs\.|slack|#[\w-]+|\bthread\b" + (f"|{_D}" if _D else "") + ")", re.I)
+# Secondary sources only (owner, Nov 20: code, ADRs, specs and the published docs are primary; Slack, Drive and the
+# ledger are secondary). The published docs no longer count as weak.
+WEAK = re.compile(r"(slack|#[\w-]+|\bthread\b|docs\.google|drive\.google|ledger|DECISIONS\.md|OPEN-ITEMS|ACTIONS\.md|\bD\d{2,4}\b|meeting notes)", re.I)
 
 
 
@@ -153,7 +167,10 @@ def run(item):
             and (item.get("created") or "") >= ASK_SINCE:
         ask = cur.get("ask")
         if not isinstance(ask, dict):
-            fail("K12", "warn", "Doesn't record the ask it answers (who, when, whether you were named, who answered since)", cur)
+            # Nov 18: with no ask recorded, reply_gate could never retire a reply that wasn't the owner's; on decide and
+            # approve_send items that now blocks instead of warning.
+            strict = item.get("type") in ("decide", "approve_send") and (item.get("created") or "") >= ASK_BLOCK_SINCE
+            fail("K12", "block" if strict else "warn", "Doesn't record the ask it answers (who, when, whether you were named, who answered since)", cur)
         elif reply_gate.verdict(ask):
             fail("K12", "block", "Not yours to answer: " + reply_gate.verdict(ask), cur)
     for s in pend:
@@ -164,22 +181,49 @@ def run(item):
             text = " ".join(external_copy(s)) or (s.get("draft") or "")
             if len(text.split()) >= 40 and prose_lint.tics(text):
                 fail("K14", "warn", "Reads like AI: " + prose_lint.summary(text) + " (S19)", s)
+    for s in pend:
+        if not is_owner(s.get("owner")) or (s.get("execute") or {}).get("kind") not in SEND_KINDS | {"ledger_pr"}:
+            continue
+        basis = s.get("basis") if isinstance(s.get("basis"), dict) else {}
+        doubts = [a for a in basis.get("assumed") or [] if UNCONFIRMED.search(str(a))]
+        draft = s.get("draft") or ""
+        if doubts and draft and not HEDGED_DRAFT.search(draft):
+            fail("K15", "warn", f"States as settled what isn't confirmed: {str(doubts[0])[:100]}", s)
+        if draft and STATUS_MET.search(draft) and superseded(s):
+            fail("K16", "warn", "Relays a status a later message in the same thread reversed: " + superseded(s)[:100], s)
     ev = [e for e in (item.get("evidence") or []) + [e for s in steps for e in s.get("evidence") or []] if e]
     if not ev and item.get("status") in ("open", "waiting"):
         fail("K5", "warn", "No source recorded")
     return out
 
 
+def superseded(step):
+    """The label of a later evidence entry, in the same Slack thread as an earlier one, that reverses a status (K16)."""
+    seen = {}
+    for e in step.get("evidence") or []:
+        m = SLACK_TS.search(str(e.get("url") or ""))
+        if not m:
+            continue
+        thread, ts = (m.group(1), (m.group(3) or m.group(2)).replace(".", "")), int(m.group(2))   # p-ts and thread_ts, one format
+        if thread in seen and ts > seen[thread] and REVERSAL.search(str(e.get("label") or "")):
+            return str(e.get("label"))
+        seen.setdefault(thread, ts)
+    return ""
+
+
 def architect_claims(claims):
-    """K10: shareable claims whose every source is public docs or Slack, with no ADR, spec or code."""
+    """K10: shareable claims whose every source is public docs or Slack, with no ADR, spec or code. A source the
+    review itself discounted (Nov 17: a spec's schema example "adds nothing as evidence") doesn't count as primary."""
     out = []
     for c in claims or []:
         if not c.get("shareable"):
             continue
-        refs = [f"{x.get('label', '')} {x.get('ref', '')}" for x in c.get("sources") or []]
-        if refs and not any(PRIMARY.search(r) for r in refs) and all(WEAK.search(r) for r in refs):
+        review = str(c.get("review") or "")
+        refs = [f"{x.get('label', '')} {x.get('ref', '')}" for x in c.get("sources") or []
+                if not (DISCOUNTED.search(review) and any(k and k in review for k in (x.get("label"), str(x.get("ref", "")).split("#")[0].split("/")[-1])))]
+        if (c.get("sources") and not refs) or (refs and not any(PRIMARY.search(r) for r in refs) and all(WEAK.search(r) for r in refs)):
             out.append({"code": "K10", "level": "warn", "claim": c.get("id"),
-                        "msg": f"{c.get('id')}: sourced only from docs or Slack; confirm against an ADR, spec or code before sharing"})
+                        "msg": f"{c.get('id')}: sourced only from Slack, Drive or the ledger; confirm against the docs, an ADR, a spec or code before sharing"})
     return out
 
 

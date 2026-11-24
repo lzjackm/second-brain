@@ -24,6 +24,7 @@ Search like an integrator would ask: field and method names, error codes, the us
 
 ## Rules
 - Never write "no date", "not published", "unconfirmed" or "not yet" until Slack and the ledger were searched for it; code sends back any answer that says so without a Slack search. Use every relevant ledger row and thread you found: a client asking how something works gets the options that exist (with their status), not only what is missing.
+- **`spans` maps the answer to its claims:** every sentence of the shareable answer that states a fact, copied exactly, with the ids of the claims it rests on. The app marks each sentence by those claims' confidence so the owner can skim to the weak ones; a factual sentence with no claim is flagged.
 - Every factual claim cites where it came from: file path with section (or line), or a link with date. No citation, no claim. Never invent numbers, limits, dates or owners (G07).
 - Do not silently resolve a conflict between sources. Report it with both sides, their dates, and who decides.
 - The shareable answer leaves out internal team names, owners, ticket IDs, open internal questions and infrastructure internals. Those go in internal notes. Plans and target dates the team has stated in Slack or the ledger go in, worded as plans ("planned for the next testnet upgrade, expected this week", "we'll publish them by Monday"); leave out only a date a source marks internal or not for partners.
@@ -37,9 +38,10 @@ Search like an integrator would ask: field and method names, error codes, the us
 End your reply with one fenced block of valid JSON, exactly this shape:
 ```json
 {"shareable_answer": "the answer exactly as {{OWNER_FIRST}} will paste it to the client, in the voice of brain/architect-voice.md: plain text, no markdown headings or bold",
- "questions": [{"q": "each distinct question the client asked, in their words, in their order", "answered": "yes | partly | no", "where": "the number or line in the shareable answer that answers it"}],
+ "questions": [{"q": "each distinct question the client asked, in their words, in their order", "answered": "yes | partly | no", "where": "the client's label for it, e.g. A1 or 3", "span": "for partly or no: the exact sentence of the answer that addresses it, or null", "missing": "for partly or no: what the sources don't settle, one line"}],
  "internal_notes": "for {{OWNER_FIRST}} only: caveats, conflicts, what is undecided, who owns it",
  "confidence": "high | medium | low",
+ "spans": [{"text": "one sentence of the shareable answer, copied exactly", "claims": ["C1", "C3"]}],
  "claims": [{"id": "C1", "text": "one factual claim the answer depends on", "shareable": true,
              "sources": [{"label": "short name", "ref": "path#section or URL", "date": "YYYY-MM-DD or null", "quote": "the exact supporting words"}]}],
  "conflicts": [{"topic": "...", "sides": ["source A says ... (date)", "source B says ... (date)"], "decider": "who settles it"}],

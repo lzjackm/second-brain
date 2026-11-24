@@ -35,6 +35,10 @@ CACHE = os.path.realpath(f"{HOME}/Library/Caches/{SLUG}")
 MEMORY = os.path.realpath(f"{HOME}/.claude/projects/{re.sub(r'[/.]', '-', str(Path.home()))}/memory")
 _extra = [*(CFG.get("source_dirs") or []), *(((CFG.get("modules") or {}).get("architect") or {}).get("search_dirs") or [])]
 READ_ROOTS = [ROOT, f"{HOME}/Projects", MEMORY, CACHE, *(os.path.realpath(os.path.expanduser(d)) for d in _extra)]
+# Claude Code saves a large tool result (a long doc, thread or meeting notes) to this project's session folder and tells
+# the run to read it there; blocking it lost the data in 88 runs (Nov 23). Only `<session>/tool-results/` of this repo.
+RESULTS = os.path.realpath(f"{HOME}/.claude/projects/{re.sub(r'[/.]', '-', ROOT)}")
+RESULT_FILE = re.compile(r"^" + re.escape(RESULTS) + r"/[0-9a-f-]{36}/tool-results/[^/]+$")
 TEMP = ["/tmp", "/private/tmp", "/private/var/folders"]
 SECRET_FILE = re.compile(r"(/\.env[^/]*$|\.(pem|key|p12|pfx)$|/\.git/config$|/\.git-credentials$|/id_(rsa|ed25519|ecdsa)[^/]*$)")
 NO_WRITE = [f"{ROOT}/{d}" for d in ("bin", "app", "prompts", "config", "launchd", ".claude", ".git", "template", "tests")]
@@ -69,7 +73,7 @@ def readable(p):
         return False
     if not inside(p, [HOME]):
         return True                       # system folders and temp
-    return inside(p, READ_ROOTS)
+    return inside(p, READ_ROOTS) or bool(RESULT_FILE.match(p))
 
 
 def writable(p):
@@ -180,7 +184,16 @@ def pre(ev):
 def post(ev):
     out = os.environ.get("JB_GUARD_RESULT")
     if out and os.environ.get("JB_GUARD_EXPECT"):
-        Path(out).write_text(json.dumps(ev.get("tool_response"), ensure_ascii=False, default=str))
+        resp = json.dumps(ev.get("tool_response"), ensure_ascii=False, default=str)
+        # A large result reaches this hook as "Output has been saved to <file>"; the session folder is deleted when the
+        # run exits, so keep the content now (Nov 23: the executor read 1,706 characters of that note instead of a doc).
+        m = re.search(r"Output has been saved to (/[^\s\\\"]+?/tool-results/[^\s\\\"]+?\.txt)", resp)
+        if m and RESULT_FILE.match(real(m.group(1))):
+            try:
+                resp = Path(m.group(1)).read_text()
+            except OSError:
+                pass
+        Path(out).write_text(resp)
 
 
 if __name__ == "__main__":

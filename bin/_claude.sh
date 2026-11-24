@@ -49,6 +49,15 @@ alert() {  # title, body: a Mac notification the owner sees
 }
 # Every run uses the owner's own Claude Code sign-in (subscription, API key via their user settings, or a cloud provider):
 # nothing about the account lives in this repo. Signed out means no run can work: stop and say how to fix it.
+# Scheduled runs (started by launchd; the app sets JB_MANUAL) stay inside working hours: weekdays, 9 AM to 7 PM ET
+# (owner's rule). Nov 21: lead, sync and scout ran all Saturday.
+if [[ -z "${JB_MANUAL:-}" ]]; then
+  DOW=$(TZ=America/New_York date +%u); HR=$(TZ=America/New_York date +%H)
+  if (( DOW > 5 || 10#$HR < 9 || 10#$HR >= 19 )); then echo "$NAME: outside working hours, skipped"; exit 0; fi
+fi
+# A dark wake (lid closed; macOS wakes for about 45 seconds an hour) can't finish a run: it sleeps again with the network
+# off and the run hangs until the deadline (Nov 21: every sync and scout from 1 PM failed this way). Skip, not fail.
+if ! pmset -g systemstate 2>/dev/null | grep -q Graphics; then echo "$NAME: Mac asleep, skipped"; exit 0; fi
 if [[ -z "$CLAUDE" ]]; then
   echo "Claude Code not found on PATH ($PATH). Install it, or run bin/doctor.sh." > "$LOG"; cp "$LOG" "$LOG.err"
   printf '{"ts": "%s", "run": "%s", "name": "%s", "job": "%s", "cost_usd": 0, "error": true, "error_short": "Claude Code not found"}\n' \
