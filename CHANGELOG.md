@@ -2,6 +2,18 @@
 
 Releases of the second-brain template. Run `/update-brain` to pull one in.
 
+## v0.5.13 (2026-11-25)
+
+- **High-stakes drafts show their thinking first.** An external reply, a decision, or a reply that answers a list point by point (a redline, review comments) carries a brief: each source read, with its kind and dates, and, for each point, your newest stated position and where you said it. Someone else's recommendation is never treated as your position, and a point no source settles stays in the draft as `[your call: A or B]`. A draft without a brief goes back for one automatic revision before you see it (`bin/draft_gate.py`); if it still fails, check K18 blocks the send.
+- **Replies only when something was asked:**
+  - A reply step records the other person's words since your last message and what they asked you to do. A reaction after you've answered isn't an ask, and the item is retired.
+  - A message you promised to send records the promise. It's retired when it was called off, when someone else took it over, or when the run didn't read the conversation back at least 7 days.
+  - A send step with neither record is retired.
+- **Claude's own follow-ups stay out of your queue.** A step that tells you to ask Claude to do something, or a review a Claude Code session made with nothing for you to press, goes to the fix queue (`bin/self_task_gate.py`). Fix-queue entries can wait until a set time (`not_before`).
+- **Copy any draft in one click.** Every draft has a copy button. A reply you paste somewhere yourself, such as an answer to a doc comment, shows as a full draft instead of a one-line talking point.
+- **Checks skip your own edits.** Once you edit a draft, the checks on the run's reasoning and prose (K13, K14, K17) no longer apply to it.
+- **Point-by-point direction drafts** that didn't read the document under review or the chats with the people involved are blocked (K17).
+
 ## v0.5.12 (2026-11-24)
 
 - **Confidence by sentence in Solution Architect answers.** Each sentence is marked by how well its sources back it, and the counts sit above the answer. A question the answer only partly covers is highlighted in the text with its label (A1, B2) and what is missing. Click a count to jump to the first sentence it counts.

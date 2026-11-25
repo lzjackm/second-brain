@@ -13,3 +13,4 @@ $PY -I "$ROOT/bin/brevity.py" "$AREA" > /dev/null || echo "brevity failed" >&2
 $PY -I "$ROOT/bin/dedupe.py" "$AREA" || true
 $PY -I "$ROOT/bin/reply_gate.py" "$AREA" || true
 $PY -I "$ROOT/bin/pr_gate.py" "$AREA" || true   # no approve or merge steps on PRs the owner opened
+$PY -I "$ROOT/bin/self_task_gate.py" "$AREA" || true   # Claude's own checks go to the fix queue, not the owner

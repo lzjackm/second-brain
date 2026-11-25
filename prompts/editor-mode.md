@@ -16,7 +16,7 @@ Instead of steps 6 and 7:
    brain. Keep it only when the ask is {{OWNER_FIRST}}'s now (P26: asked or tagged, or the decider by a ledger row; nobody
    else answered; they haven't already replied). Otherwise drop it.
 2. **Kept proposals become queue items or edits to existing ones**, per `queue/SCHEMA.md` and step 7's rules. Merge
-   proposals and existing items that are about the same thing; never create a duplicate. Record `ask` on every reply step.
+   proposals and existing items that are about the same thing; never create a duplicate. Record `ask` (with `said` and `request`) on every reply step, or `owed` on a send the owner promised (queue/SCHEMA.md); reply_gate retires a send step with neither. A high-stakes send also carries its `brief` (what was read, with dates, and the owner's sourced position per point); bin/draft_gate.py sends any draft without one back before the owner sees it.
    History `by` is `editor:{{AREA}}`.
 3. **Signals routed `update`**: apply them to the existing item they concern, as step 3 describes.
 4. **Coverage check**: read {{OWNER_FIRST}}'s DMs, group DMs and @mentions since {{PREV_RUN}} (the previous run). Anything that asks something of them and that no signal covers gets handled here, as step 6 and 7

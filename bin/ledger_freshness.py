@@ -45,10 +45,14 @@ def tool_path():
 
 
 def newest_digest_ref():
-    r = subprocess.run(["git", "-C", str(LEDGER), "for-each-ref", "--sort=-committerdate", "--format=%(refname:short)",
-                        "refs/remotes/origin/digest/"], capture_output=True, text=True)
-    refs = r.stdout.split()
-    return refs[0] if refs else "origin/main"
+    """The open digest PR's branch, from the open-PR snapshot prefetch writes; main when none is open.
+    Squash-merged digest branches stay on the remote, so the newest digest/ branch is not necessarily open."""
+    try:
+        prs = json.loads((OUT / "open-prs.json").read_text())
+    except (OSError, ValueError):
+        prs = []
+    open_digest = sorted((p for p in prs if str(p.get("headRefName", "")).startswith("digest/")), key=lambda p: p.get("number", 0))
+    return f"origin/{open_digest[-1]['headRefName']}" if open_digest else "origin/main"
 
 
 def late_sources(ref, today=None):
@@ -112,7 +116,8 @@ def source_alert(now=None, items_dir=None, late=None):
         "title": f"Daily pull can't read {len(late)} source{'s' if len(late) > 1 else ''} ({oldest} days)",
         "context": f"The {identity.LEDGER_NAME} pull has not read {names} for up to {oldest} days; their statuses are going stale.",
         "recommendation_short": fix + ".",
-        "why_owner": f"You own the {identity.LEDGER_NAME} daily ingest routine and its connectors.",
+        "why_owner": "You asked (Nov 24) for an alert whenever the daily pull cannot read a tracked source.",
+        "evidence": [{"label": "Read dates per source (state.json)", "url": f"{identity.LEDGER.get('url', '').rstrip('/')}/blob/main/sources/artifacts/state.json"}],
         "priority": 70 + min(oldest, 15), "priority_why": f"broken source 70 + {min(oldest, 15)} days unread",
         "due": now.date().isoformat(),
         "summary": "From tools/stale_rows.py on " + (ref or "the digest branch") + ": " +

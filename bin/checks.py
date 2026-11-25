@@ -24,6 +24,13 @@ Checks
 - K15 unconfirmed_as_set (warn): a send or ledger draft states as settled what its basis says is unconfirmed.
 - K16 superseded_status (warn): a draft relays a status (live, confirmed, went through) that a later message in the same
   thread, already in its evidence, reverses.
+- K18 brief (block): a high-stakes owner send that still fails bin/draft_gate.py after its automatic revision: what it
+  read doesn't cover its class or the knowledge file's sources, chats weren't read back 7 days, or points lack the
+  owner's sourced position without being left as [your call].
+- K17 adopts_recommendations (block): a draft giving direction point by point on someone else's list (a redline, legal
+  or review comments) that didn't read the document under review, didn't read any chat with the people involved, or
+  decides points its basis only assumes without leaving them as "[your call: ...]". Nov 25: a 16-point vendor contract reply took
+  Legal's fix on 9 points the owner had already settled with the firm in Slack and on calls.
 """
 import json
 import re
@@ -35,6 +42,7 @@ sys.path.insert(0, str(ROOT / "bin")) if str(ROOT / "bin") not in sys.path else 
 from identity import is_owner  # noqa: E402
 import identity  # noqa: E402
 import reply_gate  # noqa: E402
+import draft_gate  # noqa: E402
 import prose_lint  # noqa: E402  (declauding's linter: AI prose tics, S19)  (config/brain.json)
 PENDING = {"todo", "queued", "failed"}
 SLANG = re.compile(r"\b(gm|gmgm|gn|pls|plz|lmk|ty|tysm|np|imo|ngl|btw|tbh|lol|ser|wagmi|fyi)\b|!{2,}|\b\d{1,2}(st|nd|rd|th)\b", re.I)
@@ -166,15 +174,22 @@ def run(item):
     if cur and is_owner(cur.get("owner")) and (cur.get("execute") or {}).get("kind") in ("slack_send", "slack_draft") \
             and (item.get("created") or "") >= ASK_SINCE:
         ask = cur.get("ask")
-        if not isinstance(ask, dict):
+        if not isinstance(ask, dict) and "owed" in cur:
+            if reply_gate.owed_verdict(cur.get("owed")):
+                fail("K12", "block", "Not yours to send: " + reply_gate.owed_verdict(cur.get("owed")), cur)
+        elif not isinstance(ask, dict):
             # Nov 18: with no ask recorded, reply_gate could never retire a reply that wasn't the owner's; on decide and
             # approve_send items that now blocks instead of warning.
             strict = item.get("type") in ("decide", "approve_send") and (item.get("created") or "") >= ASK_BLOCK_SINCE
             fail("K12", "block" if strict else "warn", "Doesn't record the ask it answers (who, when, whether you were named, who answered since)", cur)
         elif reply_gate.verdict(ask):
             fail("K12", "block", "Not yours to answer: " + reply_gate.verdict(ask), cur)
+    if cur and draft_gate.gated(item) is cur and draft_gate.problems(item, cur):
+        fail("K18", "block", "Not thought through yet: " + "; ".join(draft_gate.problems(item, cur))[:240], cur)
+    if cur and is_owner(cur.get("owner")) and (cur.get("execute") or {}).get("kind") in SEND_KINDS and adopts_recommendations(item, cur):
+        fail("K17", "block", "Direction on each point can't be trusted: " + adopts_recommendations(item, cur), cur)
     for s in pend:
-        if is_owner(s.get("owner")) and (s.get("execute") or {}).get("kind") in SEND_KINDS:
+        if is_owner(s.get("owner")) and (s.get("execute") or {}).get("kind") in SEND_KINDS and not s.get("owner_edited"):
             probs = [p for t in external_copy(s) for p in register_problems(t)]
             if probs:
                 fail("K13", "block", "External copy reads like a chat: " + ", ".join(dict.fromkeys(probs)) + " (S18)", s)
@@ -195,6 +210,28 @@ def run(item):
     if not ev and item.get("status") in ("open", "waiting"):
         fail("K5", "warn", "No source recorded")
     return out
+
+
+POINT_LIST = re.compile(r"^\s*\d{1,2}[.)]\s", re.M)
+REVIEWED = re.compile(r"redline|contract|agreement|term sheet|comments|mark-?up|review", re.I)
+CHAT = re.compile(r"slack|\bdm\b|#\w|telegram|channel|call notes|meeting notes", re.I)
+UNDER_REVIEW = re.compile(r"redline|docx|\bdraft\b|agreement|contract|mark-?up", re.I)
+
+
+def adopts_recommendations(item, step):
+    """Why a point-by-point direction draft can't be trusted yet (K17), or None."""
+    draft = step.get("draft") or ""
+    if step.get("owner_edited") or step.get("brief") or len(POINT_LIST.findall(draft)) < 3 or not REVIEWED.search(" ".join(str(item.get(k) or "") for k in ("title", "context", "summary"))):
+        return None
+    basis = step.get("basis") or {}
+    read, not_read, assumed = (" | ".join(map(str, basis.get(k) or [])) for k in ("read", "not_read", "assumed"))
+    if UNDER_REVIEW.search(not_read):
+        return "didn't read the document under review"
+    if not CHAT.search(read):
+        return "didn't read your chats with the people involved, where you may have settled these points"
+    if assumed and "[your call" not in draft.lower():
+        return "decides points it only assumes (" + assumed[:80] + "); leave them as [your call: ...]"
+    return None
 
 
 def superseded(step):

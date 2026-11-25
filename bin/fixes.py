@@ -32,18 +32,22 @@ def entries():
     return out
 
 
-def queue(title, spec, key, by, item=None, summary=None):
-    """Append once per key; returns False when it was already queued."""
+def queue(title, spec, key, by, item=None, summary=None, not_before=None):
+    """Append once per key; returns False when it was already queued. `not_before`: an ISO time before which sessions
+    leave the entry alone (a check that only makes sense after a scheduled run)."""
     if any(e.get("key") == key for e in entries()):
         return False
     with open(path(), "a") as fh:
         fh.write(json.dumps({"ts": datetime.now(TZ).isoformat(timespec="seconds"), "key": key, "item": item, "title": title,
-                             "summary": summary or title, "spec": spec, "by": by}, ensure_ascii=False) + "\n")
+                             "summary": summary or title, "spec": spec, "by": by,
+                             **({"not_before": not_before} if not_before else {})}, ensure_ascii=False) + "\n")
     return True
 
 
-def open_entries():
-    return [e for e in entries() if not e.get("done")]
+def open_entries(now=None):
+    """Open entries that are due: not done, and past their `not_before` if they have one."""
+    now = now or datetime.now(TZ).isoformat(timespec="seconds")
+    return [e for e in entries() if not e.get("done") and (e.get("not_before") or "") <= now]
 
 
 if __name__ == "__main__":

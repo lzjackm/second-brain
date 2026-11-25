@@ -54,6 +54,8 @@ import meetings  # noqa: E402  (meetings the owner runs: calendar, agenda, debri
 import agent_session  # noqa: E402
 import press  # noqa: E402
 import reply_gate  # noqa: E402  (the owner's presses: the only thing that lets the executor act)
+import self_task_gate  # noqa: E402  (Claude's own checks never reach the owner)
+import draft_gate  # noqa: E402  (a high-stakes draft shows what it read and the owner's position per point)
 import connectors  # noqa: E402  (config/connectors.json: what runs may read)  (Talk: the owner and a step's research agent)
 
 
@@ -239,6 +241,10 @@ def executor_watch():
             if stuck and not lock_live("execute"):
                 spawn("execute.sh")
             reply_gate.sweep()        # retire replies that stopped being the owner's (bin/reply_gate.py)
+            self_task_gate.sweep()    # Claude's own checks go to the fix queue (bin/self_task_gate.py)
+            for a in draft_gate.sweep():   # high-stakes drafts show their thinking first (bin/draft_gate.py)
+                if a and not lock_live(f"revise-{a}"):
+                    spawn("revise.sh", a)
         except Exception:
             pass
 
@@ -457,6 +463,8 @@ def act(item_id, body):
         original_draft = step.get("draft", "")
         final_draft = body.get("draft", original_draft)
         step["draft"] = final_draft
+        if final_draft != original_draft:
+            step["owner_edited"] = ts   # the owner's own words: checks on a run's reasoning (K17) no longer apply
         if action == "do_step" and step.get("revise_requested") and step.get("revise_requested") > (step.get("revised_at") or ""):
             return 409, {"error": "A revision is in progress for this step. Wait for it, or edit the draft yourself and try again after it lands."}
         if action == "do_step":

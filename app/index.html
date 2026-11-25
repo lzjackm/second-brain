@@ -403,6 +403,9 @@ svg.i { stroke-width: 1.6; }
 textarea, input.text { border-radius: var(--r); background: var(--field); border: 1px solid var(--line-strong); font-size: 14px; line-height: 22px; }
 textarea:focus, input.text:focus { border-color: var(--accent); background: var(--field); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
 .draft { min-height: 88px; padding: 10px 12px; }
+.draftwrap { position: relative; } .draftwrap .draft { padding-right: 40px; width: 100%; box-sizing: border-box; }
+.draftwrap .copybtn { position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; opacity: .6; transition: opacity 120ms; }
+.draftwrap:hover .copybtn, .copybtn:focus-visible { opacity: 1; }
 .why { font-size: 14px; line-height: 22px; }
 .checkline { margin: 8px 16px 0; padding: 5px 10px; font-size: 12px; border-radius: var(--r-sm); }
 .checkline.warn { background: color-mix(in srgb, var(--warn) 10%, transparent); }
@@ -1012,8 +1015,11 @@ function currentCard(i, s, why) {
   else if (!mine) line = `Waiting on ${s.owner}.`;
   const isRep = e => (e.url || "").startsWith("/report/");
   const rep = (s.evidence || []).find(isRep) || (i.type === "meeting" ? steps(i).slice(0, steps(i).indexOf(s)).flatMap(x => x.evidence || []).filter(isRep).pop() : null);
-  const hasDraft = mine && kind !== "none";  // a none step is the owner doing it himself (a call, a review): no message box
-  const point = mine && kind === "none" && s.draft ? s.draft.trim().replace(/^talking point:\s*/i, "") : "";
+  // A none step with a link and a draft is text the owner pastes somewhere (a doc comment reply): a readable, copyable
+  // box like any draft. Without a link it is something to say on a call: a talking point.
+  const paste = mine && kind === "none" && !!s.draft && !!s.execute?.url && !s.conflicts?.length;
+  const hasDraft = mine && (kind !== "none" || paste);
+  const point = mine && kind === "none" && s.draft && !paste ? s.draft.trim().replace(/^talking point:\s*/i, "") : "";
   const to = s.execute?.target_label && kind !== "none" ? `<span class="to">${esc(s.execute.target_label)}</span>${s.new_recipient ? ` <span class="chip warn">New recipient</span>` : ""}` : "";
   const primary = mine ? `<button class="btn primary" data-step-act="do_step" ${busy ? "disabled" : ""} ${consequence(s) ? `title="${esc(consequence(s))}"` : ""}>${icon(kind === "none" ? "check" : "send")}${esc(VERB[kind] || "Done")}${to ? " to" : ""} ${to} <kbd>a</kbd></button>`
     : blocked ? `<button class="btn primary" data-step-act="take_back">${icon("user")}Take it myself <kbd>t</kbd></button>` : "";
@@ -1026,7 +1032,7 @@ function currentCard(i, s, why) {
       ${why && mine && !hasDraft && !point ? `<div class="why">${icon("bulb")}<span>${esc(why)}</span></div>` : ""}
       ${point && !s.conflicts?.length ? `<div class="why">${icon("chat")}<span>To raise: ${esc(point)}</span></div>` : ""}
       ${mine && s.conflicts?.length ? `<ol class="conflicts">${s.conflicts.map(c => `<li><div class="ct">${esc(c.topic)}</div><div><span class="lbl">Your notes</span> ${esc(c.yours)}</div><div><span class="lbl">Meeting notes</span> ${esc(c.notes_say)}${c.notes_url ? ` <a href="${safeUrl(c.notes_url)}" target="_blank" rel="noopener">source</a>` : ""}</div>${c.affects ? `<div class="soft">Changes: ${esc(c.affects)}</div>` : ""}</li>`).join("")}</ol>` : ""}
-      ${hasDraft ? `<textarea class="draft" id="draft" data-step="${esc(s.id)}" spellcheck="true" ${busy ? "disabled" : ""}>${esc(s.draft || "")}</textarea>` : ""}
+      ${hasDraft ? `<div class="draftwrap"><textarea class="draft" id="draft" data-step="${esc(s.id)}" spellcheck="true" ${busy ? "disabled" : ""}>${esc(s.draft || "")}</textarea><button class="iconbtn copybtn" data-copy-draft title="Copy" aria-label="Copy the text">${icon("copy")}</button></div>` : ""}
       <div class="bar">${busy && !blocked ? "" : primary}${mine && kind === "none" && s.execute?.url ? `<a class="btn ghost keep" href="${safeUrl(s.execute.url)}" target="_blank" rel="noopener" title="Open ${esc(s.execute.target_label || "link")}">${icon("out")}<span class="lbl">Open ${esc(s.execute.target_label || "link")}</span></a>` : ""}
         ${!busy ? `<button class="btn ghost" data-step-act="step_done_elsewhere">${icon("out")}<span class="lbl">Done elsewhere</span> <kbd>x</kbd></button>` : ""}
         <button class="btn ghost" data-chat-open>${icon("chat")}<span class="lbl">Ask</span> <kbd>c</kbd>${unread(i) ? '<span class="badge-dot"></span>' : ""}</button>
@@ -1879,6 +1885,7 @@ document.addEventListener("click", async e => {
     if (await archPost(state.arch.id, { action: "revise", text, turn: +el.dataset.archModify, depth: state.arch.depth, images: takeImgs("ask-in") })) { state.arch.q = null; renderArchQ(); toast(icon("pen") + "Rewriting"); }
     return;
   }
+  if ((el = q("[data-copy-draft]"))) { await navigator.clipboard.writeText(document.getElementById("draft")?.value || ""); return toast(icon("copy") + "Copied"); }
   if ((el = q("[data-arch-copy]"))) { const t = state.arch.q.turns[+el.dataset.archCopy]; await navigator.clipboard.writeText(t.final.shareable_answer || ""); archPost(state.arch.id, { action: "copied" }); return toast(icon("copy") + "Answer copied"); }
   if ((el = q("[data-arch-fb]"))) return workFeedback(el.dataset.archFb, async fb => { const ok = !!(await archPost(state.arch.id, { action: "feedback", ...fb })); if (ok) { state.arch.q = null; renderArchQ(); } return ok; });
   if (q("[data-arch-archive]")) { if (confirm("Archive this question?")) { await archPost(state.arch.id, { action: "archive" }); state.arch.id = null; renderArchHome(); } }
